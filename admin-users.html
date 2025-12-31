@@ -1,0 +1,1291 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kensa-Broker/ Usuarios</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="Imagenes/kensa-favicon.png" type="image/png">
+  <style>
+    /* Fallbacks mínimos si faltan estilos específicos */
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);}
+    .wrap{max-width:1200px;margin:0 auto;padding:16px;}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .grow{flex:1}
+    input[type="text"], input[type="email"], input[type="tel"], select{
+      width:100%;padding:.6rem .7rem;border:1px solid rgba(148,163,184,.35);background:var(--panel);color:inherit;border-radius:.6rem
+    }
+    table{width:100%;border-collapse:collapse;font-size:.95rem}
+    thead th{text-align:left;font-weight:600;color:var(--muted);border-bottom:1px solid rgba(148,163,184,.35);padding:.6rem .5rem}
+    tbody td{border-bottom:1px solid rgba(148,163,184,.2);padding:.6rem .5rem;vertical-align:top}
+    .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.55rem .8rem;border-radius:.65rem;border:1px solid rgba(148,163,184,.4);background:var(--panel);color:inherit;cursor:pointer}
+    .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+    .btn.ghost{background:transparent}
+    .btn.warn{background:var(--warn);border-color:var(--warn);color:#fff}
+    .card{background:var(--panel);border:1px solid rgba(148,163,184,.2);border-radius:16px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+    .table-scroll{overflow:auto;max-height:60vh;border-radius:12px}
+    .chip{display:inline-flex;align-items:center;border:1px solid rgba(148,163,184,.35);border-radius:999px;padding:.15rem .55rem;font-size:.8rem;gap:.35rem}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+    .right{margin-left:auto}
+    .muted{color:var(--muted)}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .modal{position:fixed;inset:0;width:100vw;height:100vh;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:24px;z-index:1000;overflow:auto}
+    .modal.show{display:flex}
+    .modal .dialog{background:var(--panel);border:1px solid rgba(148,163,184,.2);border-radius:16px;max-width:720px;width:100%;padding:16px;box-shadow:0 12px 36px rgba(0,0,0,.4);max-height:90vh;overflow:auto}
+    body.modal-open{overflow:hidden}
+    .dialog header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .dialog footer{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+    .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .col-permisos{display:none}
+    .user-actions{display:flex;gap:6px;align-items:center}
+    .users-app-header {
+      margin-bottom: 1rem;
+    }
+    .users-app-header .brand {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+    .users-app-header .users-actions {
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .users-header-counter {
+      margin-bottom: .5rem;
+      display:flex;
+      justify-content:flex-end;
+      color:var(--muted);
+    }
+    .users-title {
+      font-weight:600;
+      font-size:1.1rem;
+      margin-bottom:.25rem;
+    }
+    .users-title-row {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:.5rem;
+    }
+    .input-readonly {
+      background: rgba(148,163,184,.15);
+      cursor:not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <header class="app users-app-header">
+    <div class="brand header-left">
+      <img id="logoCorredora" class="logo-corredora hidden" src="" alt="Logo corredora">
+      <div class="header-divider"></div>
+      <img id="logoKonectaCuadrado" class="logo logo-konecta-cuadrado" src="Imagenes/kensa-favicon.png" alt="Logo Kensa-Broker">
+      <div class="header-user-info">
+        <div class="header-user-role" id="headerUserRole">USUARIO</div>
+        <div class="header-user-name" id="headerUserName">-</div>
+        <div id="userChip" class="muted hidden" style="font-size:.9rem">-</div>
+      </div>
+    </div>
+    <div class="users-actions">
+      <input id="q" type="text" placeholder="Buscar por nombre, email o RUT…">
+      <button id="btnNew" class="btn primary">+ Nuevo usuario</button>
+      <button id="btnTheme" class="btn" data-theme-toggle="true">Tema</button>
+      <a class="btn ghost" href="admin.html" id="btnBackAdmin" style="text-decoration:none">← Volver</a>
+    </div>
+  </header>
+
+  <main class="wrap" style="max-width:1320px">
+    <section class="card">
+      <div class="users-title-row">
+        <div class="users-title">Administrador de Usuarios</div>
+        <div class="users-header-counter" id="counter"></div>
+      </div>
+      <div class="table-scroll">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th style="width:32px"><input type="checkbox" id="chkAll"></th>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>RUT Corredor</th>
+              <th>Rol</th>
+              <th>% Comisión</th>
+              <th>Estado</th>
+              <th class="col-permisos">Permisos</th>
+              <th style="width:160px">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="toolbar">
+        <div>
+          <select id="pageSize">
+            <option>8</option><option selected>15</option><option>30</option><option>60</option><option>100</option>
+          </select>
+          <span class="muted">por página</span>
+        </div>
+        <div class="right">
+          <button id="btnDeleteSel" class="btn warn" disabled>Eliminar (0)</button>
+          <button id="prev" class="btn">←</button>
+          <span id="pageInfo" class="muted">1/1</span>
+          <button id="next" class="btn">→</button>
+        </div>
+      </div>
+    </section>
+    <section class="card" style="margin-top:16px">
+      <header class="row" style="margin-bottom:8px">
+        <h3 class="grow" style="margin:0">Registro de acciones</h3>
+        <button id="btnToggleAudit" class="btn ghost" style="padding:.35rem .6rem">▼</button>
+        <span class="muted">Mostrando últimas 100 acciones</span>
+      </header>
+      <div id="auditBody" class="table-scroll" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha/Hora</th>
+              <th>Acción</th>
+              <th>Usuario afectado</th>
+              <th>Actor</th>
+            </tr>
+          </thead>
+          <tbody id="auditRows"></tbody>
+        </table>
+        <div class="toolbar" style="margin-top:8px">
+          <div>
+            <select id="auditPageSize">
+              <option>8</option><option>15</option><option>30</option><option>60</option><option>100</option>
+            </select>
+            <span class="muted">por página</span>
+          </div>
+          <div class="right">
+            <button id="auditPrev" class="btn">←</button>
+            <span id="auditPageInfo" class="muted">1/1</span>
+            <button id="auditNext" class="btn">→</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div class="kensa-footer">
+    <div class="kensa-footer__line"><span>By Kensa SPA</span></div>
+    <a href="https://www.kensa.cl/" target="_blank" rel="noopener">Conoce sobre nosotros</a>
+  </div>
+
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+    <div class="dialog">
+      <header>
+        <h3 id="dlgTitle">Nuevo usuario</h3>
+        <button id="close" class="btn">✕</button>
+      </header>
+      <div class="grid-2">
+        <div>
+          <label>Nombre</label>
+          <input id="f_name" type="text" placeholder="Nombre y apellido">
+        </div>
+        <div>
+          <label>Email</label>
+          <input id="f_email" type="email" placeholder="correo@dominio.com">
+        </div>
+        <div>
+          <label>RUT</label>
+          <input id="f_rut" type="text" placeholder="12.345.678-9">
+        </div>
+        <div>
+          <label>RUT Corredor</label>
+          <select id="f_brokerRutSelect" class="hidden"></select>
+          <input id="f_brokerRut" type="text" placeholder="12.345.678-9">
+        </div>
+        <div>
+          <label>Rol</label>
+          <select id="f_role">
+            <option>Usuario Maestro</option>
+            <option>Administrador</option>
+            <option>Supervisor</option>
+            <option>Agente</option>
+          </select>
+        </div>
+        <div>
+          <label>% Comisión</label>
+          <input id="f_commission" type="number" min="0" max="99" placeholder="0-99">
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="f_status">
+            <option>activo</option>
+            <option>inactivo</option>
+          </select>
+        </div>
+        <div class="form-group" id="userLimitWrapper">
+          <label for="userLimiteUsuarios">Límite de usuarios</label>
+          <input
+            type="number"
+            id="userLimiteUsuarios"
+            min="0"
+            step="1"
+            placeholder="Sin límite"
+          />
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top:12px">
+        <div>
+          <label id="lbl_password">Clave</label>
+          <input id="f_password" type="password" autocomplete="new-password" placeholder="Definir clave" />
+        </div>
+        <div>
+          <label id="lbl_password_confirm">Confirmar clave</label>
+          <input id="f_password_confirm" type="password" autocomplete="new-password" placeholder="Repetir clave" />
+        </div>
+      </div>
+      <div id="userPermissionsCard" style="margin-top:12px">
+        <label>Permisos</label>
+        <div class="grid-3" id="permList" style="margin-top:6px">
+          <!-- checkboxes render here -->
+        </div>
+        <p
+          id="userPermissionsLegend"
+          class="muted"
+          style="margin-top:6px;font-size:.9rem"
+        >
+          Para Supervisores y Agentes se aplican reglas de jerarquía por rol y RUT Corredora; estos permisos quedan sin efecto.
+        </p>
+      </div>
+      <footer>
+        <button id="save" class="btn primary">Guardar</button>
+        <button id="cancel" class="btn">Cancelar</button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="dialog">
+      <header>
+        <h3 id="confirmTitle">Confirmar eliminación</h3>
+      </header>
+      <p id="confirmMsg"></p>
+      <footer>
+        <button id="confirmContinue" class="btn warn">Continuar</button>
+        <button id="confirmClose" class="btn">Cancelar</button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="confirmBulk" class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmBulkTitle">
+    <div class="dialog">
+      <header>
+        <h3 id="confirmBulkTitle">Confirmar eliminación</h3>
+      </header>
+      <p id="confirmBulkMsg"></p>
+      <footer>
+        <button id="confirmBulkContinue" class="btn warn">Continuar</button>
+        <button id="confirmBulkClose" class="btn">Cerrar</button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="userGoalModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="userGoalModalTitle">
+    <div class="dialog" style="max-width:520px">
+      <header>
+        <h3 id="userGoalModalTitle">Meta de venta del usuario</h3>
+        <button id="userGoalClose" class="btn ghost" type="button">✕</button>
+      </header>
+      <div class="muted" id="goalUserNameLabel"></div>
+      <div class="muted" id="goalUserEmailLabel" style="margin-bottom:.5rem"></div>
+      <div class="grid-2">
+        <label>RUT Corredora
+          <input id="goalUserRut" readonly>
+        </label>
+        <label>Periodo (YYYY-MM)
+          <input id="goalPeriod" type="month">
+        </label>
+      </div>
+      <div class="grid-2" style="margin-top:.5rem">
+        <label>Meta prima (UF)
+          <input id="goalPremium" type="number" min="0" step="0.01">
+        </label>
+        <label>Meta comisión corredor (UF)
+          <input id="goalCommission" type="number" min="0" step="0.01">
+        </label>
+      </div>
+      <label style="margin-top:.5rem">Meta # negocios (opcional)
+        <input id="goalDeals" type="number" min="0" step="1">
+      </label>
+      <footer>
+        <span class="muted" id="goalFeedback" style="flex:1"></span>
+        <button id="goalSave" class="btn primary" type="button">Guardar meta</button>
+        <button id="goalCancel" class="btn" type="button">Cerrar</button>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    const THEME_KEY = 'kensaTheme';
+    const applyThemeAttrs = (theme) => {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.body?.setAttribute('data-theme', theme);
+    };
+    const setTheme = (theme) => {
+      const next = theme || 'dark';
+      applyThemeAttrs(next);
+      localStorage.setItem(THEME_KEY, next);
+    };
+    const loadInitialTheme = () => {
+      const stored = localStorage.getItem(THEME_KEY);
+      if (stored) return stored;
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        return 'light';
+      }
+      return 'dark';
+    };
+    setTheme(loadInitialTheme());
+    document.addEventListener('click', (ev) => {
+      const toggleBtn = ev.target.closest('[data-theme-toggle]');
+      if (!toggleBtn) return;
+      ev.preventDefault();
+      const current = localStorage.getItem(THEME_KEY) || 'dark';
+      setTheme(current === 'dark' ? 'light' : 'dark');
+    });
+    window.addEventListener('storage', (ev) => {
+      if (ev.key === THEME_KEY && ev.newValue) {
+        applyThemeAttrs(ev.newValue);
+      }
+    });
+  })();
+  (()=>{
+    // ====== Config ======
+    const PERMISSIONS = [
+      "ver_clientes","crear_clientes",
+      "ver_polizas","crear_polizas","modificar_polizas",
+      "ver_ventas","registrar_ventas",
+      "ver_reportes",
+      "gestionar_usuarios"
+    ];
+    const normalizeRoleName = (role = '') => {
+      const raw = String(role || '').trim();
+      if (!raw) return '';
+      const lower = raw.toLowerCase();
+      if (lower === 'maestro kensa' || lower === 'usuario maestro') return 'Usuario Maestro';
+      if (lower === 'admin' || lower === 'administrador') return 'Administrador';
+      if (lower === 'supervisor') return 'Supervisor';
+      if (lower === 'agente') return 'Agente';
+      return raw;
+    };
+    const parseQuery = () => Object.fromEntries(new URLSearchParams(location.search));
+    const q = parseQuery();
+    const sessionRaw = localStorage.getItem('kensaCurrentTenant');
+    let currentSession = null;
+    try { currentSession = sessionRaw ? JSON.parse(sessionRaw) : null; } catch { currentSession = null; }
+    const fallbackTenant = 'demo-kensa';
+    const tenant =
+      q.tenant ||
+      (currentSession && currentSession.tenantId) ||
+      fallbackTenant;
+    const kClients = (t) => `corredores_v1:${t}:clients`;
+    if (!currentSession && !q.tenant) {
+      window.location.href = 'admin.html';
+      return;
+    }
+    const kUsers = (t) => `corredores_v1:${t}:users`;
+    const kUsersAudit = (t) => `corredores_v1:${t}:users_audit`;
+    const KENSA_GOALS_KEY = 'kensaGoalsByTenant';
+    const currentUserRole = normalizeRoleName(currentSession?.user?.role || '');
+    const currentUser = currentSession?.user || {};
+    const currentUserId =
+      currentUser?.id || (currentUser?.email ? `email:${normalizeEmailLocal(currentUser.email)}` : null);
+    const PERMISSIONS_LEGEND_TEXT =
+      'Para Supervisores y Agentes se aplican reglas de jerarquía por rol y RUT Corredora; estos permisos quedan sin efecto.';
+    const ROLE_OPTIONS_MAESTRO = ['Usuario Maestro', 'Administrador', 'Supervisor', 'Agente'];
+    const ROLE_OPTIONS_ADMIN = ['Supervisor', 'Agente'];
+    const ADMIN_ALLOWED_ROLES = new Set(ROLE_OPTIONS_ADMIN);
+    const currentRutCorredora =
+      currentSession?.user?.brokerRut || currentSession?.user?.rutCorredora || '';
+    const canManageGoals =
+      currentUserRole === 'Usuario Maestro' || currentUserRole === 'Administrador';
+    const HIERARCHY_ROLES = ['Supervisor', 'Agente'];
+    const isHierarchyRole = (role) => HIERARCHY_ROLES.includes(role);
+    const normalizeEmailLocal = (v = '') => v.trim().toLowerCase();
+    const normalizeRutLocal = (v = '') =>
+      String(v || '')
+        .replace(/\./g, '')
+        .replace(/-/g, '')
+        .trim()
+        .toLowerCase();
+    const normalizeGoalPeriod = (period = '') => {
+      const raw = String(period || '').trim();
+      if (/^\d{4}-\d{2}$/.test(raw)) return raw;
+      const date = new Date(raw || Date.now());
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    };
+    const getCurrentGoalPeriod = () => normalizeGoalPeriod(new Date());
+    const ensureTenantGoals = (store, rut) => {
+      if (!store[rut]) store[rut] = { userGoals: [], globalGoals: [] };
+      if (!Array.isArray(store[rut].userGoals)) store[rut].userGoals = [];
+      if (!Array.isArray(store[rut].globalGoals)) store[rut].globalGoals = [];
+      return store[rut];
+    };
+    const loadGoalsStore = () => {
+      try {
+        const raw = localStorage.getItem(KENSA_GOALS_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return typeof parsed === 'object' && parsed !== null ? parsed : {};
+      } catch {
+        return {};
+      }
+    };
+    const saveGoalsStore = (store) => {
+      try {
+        localStorage.setItem(KENSA_GOALS_KEY, JSON.stringify(store || {}));
+      } catch {
+        // ignore
+      }
+    };
+    const getUserGoalForPeriod = (rut, email, period) => {
+      if (!rut || !email) return null;
+      const store = loadGoalsStore();
+      const tenantGoals = ensureTenantGoals(store, rut);
+      const targetEmail = normalizeEmailLocal(email);
+      const comparePeriod = normalizeGoalPeriod(period);
+      return (
+        tenantGoals.userGoals.find(
+          (goal) =>
+            normalizeEmailLocal(goal.userEmail) === targetEmail &&
+            normalizeGoalPeriod(goal.period) === comparePeriod
+        ) || null
+      );
+    };
+    const upsertUserGoalLocal = (goal) => {
+      const store = loadGoalsStore();
+      const tenantGoals = ensureTenantGoals(store, goal.rutCorredora);
+      const targetEmail = normalizeEmailLocal(goal.userEmail);
+      const period = normalizeGoalPeriod(goal.period);
+      const now = Date.now();
+      const payload = {
+        rutCorredora: goal.rutCorredora,
+        userEmail: goal.userEmail,
+        userName: goal.userName || '',
+        period,
+        goalPremiumUF: Number(goal.goalPremiumUF || 0),
+        goalCommissionUF: Number(goal.goalCommissionUF || 0),
+        goalDeals:
+          goal.goalDeals !== undefined && goal.goalDeals !== ''
+            ? Number(goal.goalDeals)
+            : undefined,
+      };
+      const idx = tenantGoals.userGoals.findIndex(
+        (g) => normalizeEmailLocal(g.userEmail) === targetEmail && normalizeGoalPeriod(g.period) === period
+      );
+      if (idx > -1) {
+        tenantGoals.userGoals[idx] = { ...tenantGoals.userGoals[idx], ...payload, updatedAt: now };
+      } else {
+        tenantGoals.userGoals.push({ ...payload, createdAt: now, updatedAt: now });
+      }
+      saveGoalsStore(store);
+    };
+
+    // ====== State ======
+    let users = loadUsers();
+    let userAuditLog = loadAuditLog();
+    let page = 1;
+    let pageSize = 15;
+    let selected = new Set();
+    let editingIndex = -1; // -1 => nuevo
+    let pendingDeleteIndex = null;
+    let auditPageIndex = 0;
+    let auditPageSize = 8;
+    let goalContextUser = null;
+    const getCurrentUserLimit = () => {
+      const normalizeLimit = (value) => {
+        if (typeof value === 'number') return Number.isNaN(value) ? null : value;
+        if (value === undefined || value === null || value === '') return null;
+        const parsed = parseInt(value, 10);
+        if (Number.isNaN(parsed) || parsed < 0) return null;
+        return parsed;
+      };
+      const fromSession = normalizeLimit(currentUser?.limiteUsuarios);
+      if (fromSession !== null) return fromSession;
+      const email = normalizeEmailLocal(currentUser?.email || '');
+      if (!email) return null;
+      const storedUser =
+        (users || []).find((u) => normalizeEmailLocal(u.email || '') === email) || null;
+      return normalizeLimit(storedUser?.limiteUsuarios);
+    };
+
+    // ====== Elements ======
+    const el = (id)=>document.getElementById(id);
+    const rows = el('rows');
+    const chkAll = el('chkAll');
+    const pageInfo = el('pageInfo');
+    const btnDeleteSel = el('btnDeleteSel');
+    const auditRows = el('auditRows');
+    const confirmModal = el('confirmModal');
+    const confirmMsg = el('confirmMsg');
+    const confirmClose = el('confirmClose');
+    const confirmContinue = el('confirmContinue');
+    const confirmBulk = el('confirmBulk');
+    const confirmBulkMsg = el('confirmBulkMsg');
+    const confirmBulkClose = el('confirmBulkClose');
+    const confirmBulkContinue = el('confirmBulkContinue');
+    const loginUserChip = el('userChip');
+    const auditBody = el('auditBody');
+    const btnToggleAudit = el('btnToggleAudit');
+    const auditPageSizeSelect = el('auditPageSize');
+    const auditPrev = el('auditPrev');
+    const auditNext = el('auditNext');
+    const auditPageInfo = el('auditPageInfo');
+    const permNote = el('userPermissionsLegend');
+    const userPermissionsCard = el('userPermissionsCard');
+    const userLimitInput = el('userLimiteUsuarios');
+    const userLimitWrapper = el('userLimitWrapper');
+    const goalModal = el('userGoalModal');
+    const goalClose = el('userGoalClose');
+    const goalCancel = el('goalCancel');
+    const goalSave = el('goalSave');
+    const goalUserNameLabel = el('goalUserNameLabel');
+    const goalUserEmailLabel = el('goalUserEmailLabel');
+    const goalUserRutInput = el('goalUserRut');
+    const goalPeriodInput = el('goalPeriod');
+    const goalPremiumInput = el('goalPremium');
+    const goalCommissionInput = el('goalCommission');
+    const goalDealsInput = el('goalDeals');
+    const goalFeedback = el('goalFeedback');
+    const headerUserName = el('headerUserName');
+    const headerUserRole = el('headerUserRole');
+    const logoCorredora = el('logoCorredora');
+    const logoKonecta = el('logoKonectaCuadrado');
+
+    const findClientByRut = (rut) => {
+      const target = normalizeRutLocal(rut || '');
+      if (!target) return null;
+      const list = loadClientsList();
+      return list.find((c) => normalizeRutLocal(c.rutCorredora || '') === target) || null;
+    };
+    const applyHeaderBrand = () => {
+      const current = currentSession?.user || {};
+      if (headerUserRole) headerUserRole.textContent = 'USUARIO';
+      const nameValue = current.name || current.email || 'Usuario';
+      if (headerUserName) headerUserName.textContent = nameValue;
+      if (loginUserChip) loginUserChip.textContent = nameValue;
+      const rut = current.rutCorredora || current.brokerRut || '';
+      const client = findClientByRut(rut);
+      if (logoCorredora) {
+        if (client?.logoDataUrl) {
+          logoCorredora.src = client.logoDataUrl;
+          logoCorredora.classList.remove('hidden');
+        } else {
+          logoCorredora.src = '';
+          logoCorredora.classList.add('hidden');
+        }
+      }
+      if (logoKonecta && !logoKonecta.src) {
+        logoKonecta.src = '';
+      }
+    };
+    applyHeaderBrand();
+
+    // Render permission checkboxes in dialog
+    const permHost = el('permList');
+    PERMISSIONS.forEach(p=>{
+      const id = 'perm_'+p;
+      const wrap = document.createElement('label');
+      wrap.className = 'chip';
+      wrap.innerHTML = `<input type="checkbox" id="${id}" data-perm="${p}"> <span>${p}</span>`;
+      permHost.appendChild(wrap);
+    });
+
+    // ====== Storage ======
+    function loadUsers(){
+      try{
+        const raw = localStorage.getItem(kUsers(tenant));
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr.map(u=>({ ...u, role: normalizeRoleName(u.role) })) : [];
+      }catch(e){ return []; }
+    }
+    function saveUsers(){
+      localStorage.setItem(kUsers(tenant), JSON.stringify(users));
+    }
+    function loadAuditLog(){
+      try{
+        const raw = localStorage.getItem(kUsersAudit(tenant));
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      }catch(e){ return []; }
+    }
+    function saveAuditLog(){
+      localStorage.setItem(kUsersAudit(tenant), JSON.stringify(userAuditLog));
+    }
+    function loadClientsList() {
+      try {
+        const raw = localStorage.getItem(kClients(tenant));
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      } catch {
+        return [];
+      }
+    }
+    function getActiveClients() {
+      return loadClientsList().filter(
+        (c) => String(c.estado || '').toLowerCase() === 'activo'
+      );
+    }
+    const getActor = () => {
+      // TODO: reemplazar por usuario autenticado real cuando esté disponible.
+      return localStorage.getItem('conecta_current_user') || 'usuario_desconocido';
+    };
+    function logAudit(entry){
+      userAuditLog.push({
+        timestamp: new Date().toISOString(),
+        actor: getActor(),
+        ...entry
+      });
+      saveAuditLog();
+      renderAuditLog();
+    }
+
+    // ====== UI Helpers ======
+  function applySearch(list){
+    const term = (el('q').value||'').trim().toLowerCase();
+      if(!term) return list;
+      return list.filter(u =>
+        (u.name||'').toLowerCase().includes(term) ||
+        (u.email||'').toLowerCase().includes(term) ||
+        (u.brokerRut||'').toLowerCase().includes(term) ||
+        (u.rut||'').toLowerCase().includes(term) ||
+        String(u.commission ?? '').toLowerCase().includes(term)
+      );
+    }
+    function getVisibleUsersForCurrentUser(list = []) {
+      if (currentUserRole === 'Usuario Maestro') return list.slice();
+      if (currentUserRole === 'Administrador') {
+        const rutScope = normalizeRutLocal(currentRutCorredora || '');
+        if (!rutScope) return [];
+        return list.filter((u) => {
+          const userRut =
+            normalizeRutLocal(u.brokerRut || u.rutCorredora || '');
+          const userRole = normalizeRoleName(u.role || '');
+          return userRut && userRut === rutScope && ADMIN_ALLOWED_ROLES.has(userRole);
+        });
+      }
+      return [];
+    }
+    function paginate(list){
+      const total = list.length;
+      const pages = Math.max(1, Math.ceil(total / pageSize));
+      if(page>pages) page = pages;
+      const start = (page-1)*pageSize;
+      const slice = list.slice(start, start + pageSize);
+      pageInfo.textContent = `${page}/${pages} · ${total} usuarios`;
+      return slice;
+    }
+    function render(){
+      const visible = getVisibleUsersForCurrentUser(users);
+      const filtered = applySearch(visible);
+      const annotated = filtered
+        .map((u) => ({ user: u, idx: users.indexOf(u) }))
+        .filter((item) => item.idx > -1);
+      const view = paginate(annotated);
+      rows.innerHTML = view
+        .map(({ user: u, idx }) => {
+        const perms = Array.isArray(u.permissions)?u.permissions:[];
+        const chips = perms.map(p=>`<span class="chip">${p}</span>`).join(' ');
+        const isSel = selected.has(idx) ? 'checked' : '';
+        const goalBtn = canManageGoals
+          ? `<button class="btn secondary" data-act="goal" data-idx="${idx}" title="Asignar meta de Venta">↗</button>`
+          : '';
+        return `<tr>
+          <td><input type="checkbox" data-idx="${idx}" class="rowChk" ${isSel}></td>
+          <td>${u.name||''}</td>
+          <td>${u.email||''}</td>
+          <td>${u.brokerRut||''}</td>
+          <td><span class="chip">${u.role||''}</span></td>
+          <td>${u.commission ?? 0}%</td>
+          <td>${u.status||'activo'}</td>
+          <td class="col-permisos">${chips}</td>
+          <td>
+            <div class="user-actions">
+              <button class="btn" data-act="edit" data-idx="${idx}">Editar</button>
+              ${goalBtn}
+              <button class="btn warn" data-act="del" data-idx="${idx}">X</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+      // Counter + header checkbox
+      el('counter').textContent = selected.size>0 ? `${selected.size} seleccionados` : `${filtered.length} encontrados`;
+      chkAll.checked = view.length>0 && view.every((entry)=>selected.has(entry.idx));
+      btnDeleteSel.disabled = selected.size===0;
+      btnDeleteSel.textContent = selected.size?`Eliminar (${selected.size})`:'Eliminar (0)';
+    }
+    function renderAuditLog(){
+      if(!auditRows) return;
+      const recent = userAuditLog.slice(-100).reverse();
+      const total = recent.length;
+      const pages = Math.max(1, Math.ceil(total / auditPageSize));
+      if (auditPageIndex >= pages) auditPageIndex = pages - 1;
+      const start = auditPageIndex * auditPageSize;
+      const slice = recent.slice(start, start + auditPageSize);
+      auditRows.innerHTML = slice.length ? slice.map(item=>{
+        const ts = item.timestamp ? new Date(item.timestamp).toLocaleString() : '';
+        const target = item.targetName || (Array.isArray(item.targets) ? item.targets.join(', ') : '');
+        const actor = item.actor || '';
+        const action = item.action || '';
+        return `<tr>
+          <td>${ts}</td>
+          <td>${action}</td>
+          <td>${target}</td>
+          <td>${actor}</td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="4" class="muted">Sin registros</td></tr>';
+      if (auditPageInfo) auditPageInfo.textContent = `${auditPageIndex+1}/${pages}`;
+      if (auditPrev) auditPrev.disabled = auditPageIndex === 0;
+      if (auditNext) auditNext.disabled = auditPageIndex >= pages - 1;
+      if (auditPageSizeSelect && auditPageSizeSelect.value != auditPageSize) {
+        auditPageSizeSelect.value = String(auditPageSize);
+      }
+    }
+
+    function fillGoalFormFor(period) {
+      if (!goalPeriodInput || !goalContextUser) return;
+      const formatted = normalizeGoalPeriod(period || goalPeriodInput.value || getCurrentGoalPeriod());
+      goalPeriodInput.value = formatted;
+      const meta = getUserGoalForPeriod(goalContextUser.brokerRut, goalContextUser.email, formatted);
+      goalPremiumInput.value = meta?.goalPremiumUF ?? '';
+      goalCommissionInput.value = meta?.goalCommissionUF ?? '';
+      goalDealsInput.value = meta?.goalDeals ?? '';
+      goalFeedback.textContent = meta ? 'Meta existente cargada' : '';
+    }
+
+    function openGoalModal(user, idx) {
+      if (!canManageGoals || !goalModal || !user) return;
+      goalContextUser = { ...user, idx };
+      goalUserNameLabel.textContent = user.name || '';
+      goalUserEmailLabel.textContent = user.email || '';
+      goalUserRutInput.value = user.brokerRut || '';
+      goalPeriodInput.value = getCurrentGoalPeriod();
+      goalPremiumInput.value = '';
+      goalCommissionInput.value = '';
+      goalDealsInput.value = '';
+      goalFeedback.textContent = '';
+      fillGoalFormFor(goalPeriodInput.value);
+      goalModal.classList.add('show');
+      document.body.classList.add('modal-open');
+    }
+
+    function closeGoalModal() {
+      if (!goalModal) return;
+      goalModal.classList.remove('show');
+      document.body.classList.remove('modal-open');
+      goalContextUser = null;
+      goalFeedback.textContent = '';
+    }
+
+
+    // ====== Dialog ======
+    const modal = el('modal');
+    const roleSelect = el('f_role');
+    const brokerRutInput = el('f_brokerRut');
+    const brokerRutSelect = el('f_brokerRutSelect');
+    function getRoleOptionsForScope() {
+      if (currentUserRole === 'Usuario Maestro') return ROLE_OPTIONS_MAESTRO;
+      if (currentUserRole === 'Administrador') return ROLE_OPTIONS_ADMIN;
+      return [];
+    }
+    function getDefaultRoleForScope() {
+      if (currentUserRole === 'Administrador') return 'Supervisor';
+      return 'Agente';
+    }
+    function populateRoleSelect(selectedRole) {
+      if (!roleSelect) return;
+      const options = getRoleOptionsForScope();
+      roleSelect.innerHTML = '';
+      roleSelect.disabled = options.length === 0;
+      options.forEach((role) => {
+        const opt = document.createElement('option');
+        opt.value = role;
+        opt.textContent = role;
+        roleSelect.appendChild(opt);
+      });
+      if (selectedRole && options.includes(selectedRole)) {
+        roleSelect.value = selectedRole;
+      } else if (options.length) {
+        roleSelect.value = options[0];
+      }
+    }
+    function toggleRutCorredoraField(isMaestroMode) {
+      if (!brokerRutInput) return;
+      if (brokerRutSelect) {
+        brokerRutSelect.classList.toggle('hidden', !isMaestroMode);
+        brokerRutSelect.style.display = isMaestroMode ? '' : 'none';
+      }
+      brokerRutInput.style.display = isMaestroMode ? 'none' : '';
+      brokerRutInput.readOnly = !isMaestroMode && brokerRutInput.readOnly;
+    }
+    function populateRutCorredoraSelect(selectedRut) {
+      if (!brokerRutSelect) return;
+      const clients = getActiveClients();
+      brokerRutSelect.innerHTML = '';
+      if (!clients.length) {
+        if (selectedRut) {
+          const opt = document.createElement('option');
+          opt.value = selectedRut;
+          opt.textContent = `${selectedRut} (no activo)`;
+          brokerRutSelect.appendChild(opt);
+          brokerRutSelect.disabled = false;
+          brokerRutSelect.value = selectedRut;
+        } else {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'Sin clientes activos';
+          brokerRutSelect.appendChild(opt);
+          brokerRutSelect.disabled = true;
+        }
+        return;
+      }
+      brokerRutSelect.disabled = false;
+      const normalizedSelected = normalizeRutLocal(selectedRut || '');
+      const hasSelectedInList = clients.some(
+        (client) => normalizeRutLocal(client.rutCorredora || '') === normalizedSelected
+      );
+      clients.forEach((client) => {
+        const opt = document.createElement('option');
+        opt.value = client.rutCorredora || '';
+        opt.textContent = `${client.nombreCorredora || 'Cliente'} (${client.rutCorredora || ''})`;
+        brokerRutSelect.appendChild(opt);
+      });
+      if (selectedRut && !hasSelectedInList) {
+        const opt = document.createElement('option');
+        opt.value = selectedRut;
+        opt.textContent = `${selectedRut} (no activo)`;
+        brokerRutSelect.appendChild(opt);
+      }
+      if (selectedRut) brokerRutSelect.value = selectedRut;
+      if (!brokerRutSelect.value && clients.length) {
+        brokerRutSelect.value = clients[0].rutCorredora || '';
+      }
+    }
+    function syncRutInputFromSelect() {
+      if (!brokerRutInput || !brokerRutSelect) return;
+      brokerRutInput.value = brokerRutSelect.value || '';
+    }
+    function applyBrokerRutLock(data) {
+      if (!brokerRutInput) return;
+      if (currentUserRole === 'Usuario Maestro') {
+        toggleRutCorredoraField(true);
+        populateRutCorredoraSelect(data?.brokerRut || data?.rutCorredora || currentRutCorredora || '');
+        syncRutInputFromSelect();
+        brokerRutInput.classList.remove('input-readonly');
+        return;
+      }
+      toggleRutCorredoraField(false);
+      if (currentUserRole === 'Administrador') {
+        const value =
+          (editingIndex >= 0
+            ? data?.brokerRut || currentRutCorredora || ''
+            : currentRutCorredora || '') || '';
+        brokerRutInput.value = value;
+        brokerRutInput.readOnly = true;
+        brokerRutInput.classList.add('input-readonly');
+      } else {
+        brokerRutInput.readOnly = false;
+        brokerRutInput.classList.remove('input-readonly');
+        brokerRutInput.value = data?.brokerRut || '';
+      }
+    }
+    function applyPermissionsVisibilityForUserRole(userRole) {
+      const normalized = normalizeRoleName(userRole);
+      const hideByRole = normalized === 'Administrador';
+      const hideByViewer = currentUserRole === 'Administrador';
+      const hide = hideByRole || hideByViewer;
+      if (userPermissionsCard) userPermissionsCard.style.display = hide ? 'none' : '';
+      if (permNote) {
+        permNote.style.display = hide ? 'none' : '';
+        if (hide) permNote.textContent = '';
+      }
+    }
+    function applyUserLimitVisibility(userData) {
+      if (!userLimitWrapper) return;
+      const targetRole = normalizeRoleName(userData?.role || roleSelect?.value || '');
+      const shouldShow = currentUserRole === 'Usuario Maestro' && targetRole === 'Administrador';
+      userLimitWrapper.style.display = shouldShow ? '' : 'none';
+    }
+    function setUserLimitValue(data) {
+      if (!userLimitInput) return;
+      if (data && typeof data.limiteUsuarios === 'number') userLimitInput.value = data.limiteUsuarios;
+      else userLimitInput.value = '';
+    }
+  function openDialog(title, data){
+    const isEditing = editingIndex >= 0;
+    el('dlgTitle').textContent = title;
+    el('f_name').value = data?.name||'';
+    el('f_email').value = data?.email||'';
+    el('f_rut').value = data?.rut||'';
+    el('f_commission').value = data?.commission ?? '';
+    el('f_status').value = data?.status||'activo';
+    el('f_password').value = '';
+    el('f_password_confirm').value = '';
+    el('lbl_password').textContent = isEditing ? 'Definir nueva clave (opcional)' : 'Clave';
+    el('f_password').placeholder = isEditing ? 'Dejar en blanco para mantener' : 'Definir clave';
+    el('lbl_password_confirm').textContent = isEditing ? 'Confirmar nueva clave' : 'Confirmar clave';
+    el('f_password_confirm').placeholder = isEditing ? 'Repetir nueva clave' : 'Repetir clave';
+    const initialRole = normalizeRoleName(data?.role) || getDefaultRoleForScope();
+    populateRoleSelect(initialRole);
+    const roleForUi = roleSelect?.value || initialRole || 'Agente';
+    setUserLimitValue(data);
+    applyUserLimitVisibility({ ...(data || {}), role: roleForUi });
+    applyPermissionsVisibilityForUserRole(roleForUi);
+    syncPermissionUi(roleForUi);
+    applyBrokerRutLock(data);
+    // perms
+    document.querySelectorAll('#permList [data-perm]').forEach(ch=>{
+      ch.checked = (data?.permissions||[]).includes(ch.dataset.perm);
+    });
+    modal.classList.add('show');
+    document.body.classList.add('modal-open');
+  }
+    function closeDialog(){
+      modal.classList.remove('show');
+      document.body.classList.remove('modal-open');
+    }
+
+    if (roleSelect) {
+      roleSelect.addEventListener('change', (e)=>{
+        const value = e.target.value;
+        syncPermissionUi(value);
+        applyPermissionsVisibilityForUserRole(value);
+        applyUserLimitVisibility({ role: value });
+      });
+    }
+    if (brokerRutSelect) {
+      brokerRutSelect.addEventListener('change', syncRutInputFromSelect);
+    }
+
+  function collectForm(){
+    const roleValue = roleSelect ? roleSelect.value : getDefaultRoleForScope();
+    const role = normalizeRoleName(roleValue);
+    if (currentUserRole === 'Administrador' && !ADMIN_ALLOWED_ROLES.has(role)) {
+      alert('No tienes permiso para asignar ese rol.');
+      return null;
+    }
+    const perms = isHierarchyRole(role)
+      ? []
+      : [...document.querySelectorAll('#permList [data-perm]:checked')].map(ch=>ch.dataset.perm);
+    const pwd = el('f_password').value;
+    const pwdConfirm = el('f_password_confirm').value;
+    let brokerRutValue = el('f_brokerRut').value.trim();
+    if (currentUserRole === 'Usuario Maestro') {
+      if (brokerRutSelect && !brokerRutSelect.disabled && brokerRutSelect.options.length) {
+        brokerRutValue = brokerRutSelect.value || '';
+      } else {
+        alert('Debes tener al menos una corredora activa en la lista de clientes para asignar usuarios.');
+        return null;
+      }
+      if (!brokerRutValue) {
+        alert('Selecciona un RUT de corredora válido.');
+        return null;
+      }
+    } else if (currentUserRole === 'Administrador') {
+      brokerRutValue =
+        editingIndex >= 0
+          ? users[editingIndex]?.brokerRut || currentRutCorredora || ''
+          : currentRutCorredora || '';
+    }
+    let limiteUsuarios = null;
+    if (role === 'Administrador') {
+      const existingLimit =
+        editingIndex >= 0 && users[editingIndex]?.role === 'Administrador'
+          ? users[editingIndex].limiteUsuarios ?? null
+          : null;
+      if (currentUserRole === 'Usuario Maestro') {
+        if (userLimitInput && userLimitInput.value !== '') {
+          const parsed = parseInt(userLimitInput.value, 10);
+          if (!Number.isNaN(parsed) && parsed >= 0) {
+            limiteUsuarios = parsed;
+          }
+        }
+      } else {
+        limiteUsuarios = existingLimit;
+      }
+    }
+    return {
+      name: el('f_name').value.trim(),
+      email: el('f_email').value.trim().toLowerCase(),
+      rut: el('f_rut').value.trim(),
+      brokerRut: brokerRutValue,
+      commission: parseFloat(el('f_commission').value || '0') || 0,
+      role,
+      status: el('f_status').value,
+      permissions: perms,
+      password: pwd,
+      passwordConfirm: pwdConfirm,
+      limiteUsuarios,
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+    function syncPermissionUi(role){
+      const normalized = normalizeRoleName(role);
+      const disable = isHierarchyRole(normalized);
+      document.querySelectorAll('#permList [data-perm]').forEach(ch=>{
+        ch.disabled = disable;
+      });
+      if (permNote) {
+        permNote.textContent = disable ? PERMISSIONS_LEGEND_TEXT : '';
+      }
+    }
+
+    // ====== Events ======
+    document.addEventListener('click', (ev)=>{
+      const t = ev.target;
+      if(t.matches('#btnNew')){
+        editingIndex = -1;
+        openDialog('Nuevo usuario');
+      }
+      if(t.matches('#cancel, #close')) closeDialog();
+      if(t.matches('#save')){
+        const data = collectForm();
+        if (!data) return;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const passwordRegex = /^(?=.*[A-Z])(?=.*[!"#$)=?]).{8,}$/;
+        if(!data.name || !data.email){
+          alert('Nombre y correo son obligatorios');
+          return;
+        }
+        if(!emailRegex.test(data.email)){
+          alert('El correo ingresado no tiene un formato válido.');
+          return;
+        }
+        const exists = users.some((u, idx)=> idx !== editingIndex && (u.email||'').toLowerCase() === data.email.toLowerCase());
+        if(exists){
+          alert('Ya existe un usuario registrado con ese correo.');
+          return;
+        }
+        if(data.password !== data.passwordConfirm){
+          alert('La clave y la confirmación no coinciden.');
+          return;
+        }
+        if(editingIndex < 0){
+          if(!data.password){
+            alert('La clave es obligatoria.');
+            return;
+          }
+          if(!passwordRegex.test(data.password)){
+            alert('La clave debe tener al menos 8 caracteres, 1 mayúscula y 1 carácter especial de: !"#$)=?');
+            return;
+          }
+        } else {
+          if(data.password && !passwordRegex.test(data.password)){
+            alert('La clave debe tener al menos 8 caracteres, 1 mayúscula y 1 carácter especial de: !"#$)=?');
+            return;
+          }
+        }
+        if (editingIndex < 0 && currentUserRole === 'Administrador') {
+          const adminLimit = getCurrentUserLimit();
+          const hasLimit = typeof adminLimit === 'number' && !Number.isNaN(adminLimit);
+          const targetIsHierarchy = isHierarchyRole(data.role);
+          if (hasLimit && targetIsHierarchy) {
+            const createdByAdmin = users.filter((u) => u.creadoPorId === currentUserId).length;
+            if (createdByAdmin >= adminLimit) {
+              alert(
+                `¡Importante! Has alcanzado el límite de ${adminLimit} usuarios configurado para tu cuenta. Contacta a tu proveedor para ampliar el límite.`
+              );
+              return;
+            }
+          }
+        }
+        if(editingIndex<0){
+          const toSave = {...data};
+          // Clave opcional por ahora; se puede hacer obligatoria más adelante.
+          if(!toSave.password) delete toSave.password;
+          delete toSave.passwordConfirm;
+          toSave.createdAt = new Date().toISOString();
+          toSave.creadoPorId = currentUserId || null;
+          users.push(toSave);
+          logAudit({action:'create', targetId: users.length-1, targetName: toSave.name});
+        }
+        else {
+          const prev = users[editingIndex];
+          const toSave = Object.assign({}, prev, data);
+          if(!data.password){ // no actualizar clave si se deja vacío
+            if(Object.prototype.hasOwnProperty.call(prev,'password')) toSave.password = prev.password;
+            else delete toSave.password;
+          }
+          delete toSave.passwordConfirm;
+          users[editingIndex] = toSave;
+          logAudit({action:'update', targetId: editingIndex, targetName: toSave.name});
+        }
+        saveUsers(); closeDialog(); render();
+      }
+      if(t.matches('[data-act="edit"]')){
+        editingIndex = parseInt(t.dataset.idx,10);
+        openDialog('Editar usuario', users[editingIndex]);
+      }
+      if(t.matches('[data-act="goal"]')){
+        const idx = parseInt(t.dataset.idx,10);
+        openGoalModal(users[idx], idx);
+      }
+      if(t.matches('[data-act="del"]')){
+        const idx = parseInt(t.dataset.idx,10);
+        pendingDeleteIndex = idx;
+        const userName = users[idx]?.name || 'el usuario seleccionado';
+        confirmMsg.textContent = `Esta apunto de eliminar a "${userName}", ¿Esta seguro de continuar?`;
+        confirmModal.classList.add('show');
+      }
+    });
+
+    el('q').addEventListener('input', ()=>{ page=1; render(); });
+    el('pageSize').addEventListener('change', (e)=>{ pageSize = parseInt(e.target.value,10); page=1; render(); });
+    el('prev').addEventListener('click', ()=>{ if(page>1){page--; render();} });
+    el('next').addEventListener('click', ()=>{
+      const pages = Math.max(
+        1,
+        Math.ceil(applySearch(getVisibleUsersForCurrentUser(users)).length / pageSize)
+      );
+      if(page<pages){ page++; render(); }
+    });
+
+    // Row selection
+    document.addEventListener('change', (ev)=>{
+      const t = ev.target;
+      if(t.classList.contains('rowChk')){
+        const idx = parseInt(t.getAttribute('data-idx'),10);
+        if(t.checked) selected.add(idx); else selected.delete(idx);
+        render();
+      }
+      if(t===chkAll){
+        for(const ch of document.querySelectorAll('tbody .rowChk')){
+          const idx = parseInt(ch.getAttribute('data-idx'),10);
+          ch.checked = t.checked;
+          if(t.checked) selected.add(idx); else selected.delete(idx);
+        }
+        render();
+      }
+    });
+
+    el('btnDeleteSel').addEventListener('click', ()=>{
+      if(selected.size===0) return;
+      const count = selected.size;
+      const msg = count === 1
+        ? 'Está a punto de eliminar 1 usuario seleccionado. ¿Está seguro de continuar?'
+        : `Está a punto de eliminar ${count} usuarios seleccionados. ¿Está seguro de continuar?`;
+      confirmBulkMsg.textContent = msg;
+      confirmBulk.classList.add('show');
+    });
+
+
+    confirmClose.addEventListener('click', ()=>{
+      pendingDeleteIndex = null;
+      confirmModal.classList.remove('show');
+    });
+
+    confirmContinue.addEventListener('click', ()=>{
+      if(pendingDeleteIndex !== null && users[pendingDeleteIndex]){
+        const removed = users[pendingDeleteIndex];
+        logAudit({action:'delete', targetId: pendingDeleteIndex, targetName: removed?.name || ''});
+        users.splice(pendingDeleteIndex,1);
+        saveUsers();
+        render();
+      }
+      pendingDeleteIndex = null;
+      confirmModal.classList.remove('show');
+    });
+
+    confirmBulkClose.addEventListener('click', ()=>{
+      confirmBulk.classList.remove('show');
+    });
+
+    confirmBulkContinue.addEventListener('click', ()=>{
+      if(selected.size===0){
+        confirmBulk.classList.remove('show');
+        return;
+      }
+      const targets = [...selected].map(idx=>users[idx]?.name || '').filter(Boolean);
+      const keep = users.filter((_,idx)=>!selected.has(idx));
+      users = keep;
+      selected.clear();
+      logAudit({action:'delete_bulk', targets});
+      saveUsers();
+      render();
+      confirmBulk.classList.remove('show');
+    });
+
+    goalClose?.addEventListener('click', closeGoalModal);
+    goalCancel?.addEventListener('click', closeGoalModal);
+    goalModal?.addEventListener('click', (ev)=>{ if(ev.target === goalModal) closeGoalModal(); });
+    goalPeriodInput?.addEventListener('change', ()=>fillGoalFormFor(goalPeriodInput.value));
+    goalSave?.addEventListener('click', ()=>{
+      if (!goalContextUser || !canManageGoals) return;
+      const rutUsuario = goalContextUser.brokerRut || '';
+      const rutSesion = currentRutCorredora || '';
+      if (!rutUsuario || !rutSesion || normalizeRutLocal(rutUsuario) !== normalizeRutLocal(rutSesion)) {
+        alert('No puedes editar metas de otra corredora.');
+        return;
+      }
+      const period = normalizeGoalPeriod(goalPeriodInput?.value || getCurrentGoalPeriod());
+      if (!period) {
+        alert('Debes definir un periodo válido (YYYY-MM).');
+        return;
+      }
+      const premium = Number(goalPremiumInput?.value || 0);
+      const commission = Number(goalCommissionInput?.value || 0);
+      const deals =
+        goalDealsInput?.value !== '' && goalDealsInput?.value !== null
+          ? Number(goalDealsInput.value)
+          : undefined;
+      if (premium < 0 || commission < 0 || (deals !== undefined && deals < 0)) {
+        alert('Las metas deben ser mayores o iguales a cero.');
+        return;
+      }
+      upsertUserGoalLocal({
+        rutCorredora: rutUsuario,
+        userEmail: goalContextUser.email,
+        userName: goalContextUser.name || goalContextUser.email,
+        period,
+        goalPremiumUF: premium,
+        goalCommissionUF: commission,
+        goalDeals: deals,
+      });
+      goalFeedback.textContent = 'Meta guardada correctamente';
+      setTimeout(()=> goalFeedback.textContent = '', 2000);
+      fillGoalFormFor(period);
+    });
+
+    const btnBackAdmin = document.getElementById('btnBackAdmin');
+    if (btnBackAdmin) {
+      btnBackAdmin.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (window.history.length > 1) window.history.back();
+        else window.location.href = 'admin.html';
+      });
+    }
+    if (btnToggleAudit && auditBody) {
+      auditBody.style.display = 'none';
+      btnToggleAudit.addEventListener('click', ()=>{
+        const isHidden = auditBody.style.display === 'none';
+        auditBody.style.display = isHidden ? '' : 'none';
+        btnToggleAudit.textContent = isHidden ? '▲' : '▼';
+      });
+    }
+    if (auditPrev) auditPrev.addEventListener('click', ()=>{
+      if(auditPageIndex>0){ auditPageIndex--; renderAuditLog(); }
+    });
+    if (auditNext) auditNext.addEventListener('click', ()=>{
+      auditPageIndex++; renderAuditLog();
+    });
+    if (auditPageSizeSelect) auditPageSizeSelect.addEventListener('change', (e)=>{
+      const val = parseInt(e.target.value,10);
+      if(!isNaN(val)){
+        auditPageSize = val;
+        auditPageIndex = 0;
+        renderAuditLog();
+      }
+    });
+
+    // Primer render
+    render();
+    renderAuditLog();
+  })();
+  </script>
+</body>
+</html>

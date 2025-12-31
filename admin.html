@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Kensa-Broker</title>
+    <link href="styles.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" href="Imagenes/kensa-favicon.png" type="image/png">
+    <style>
+      .search-select {
+        position: relative;
+        width: 100%;
+      }
+      .search-select-input {
+        width: 100%;
+      }
+      .search-select-list {
+        position: absolute;
+        top: calc(100% + 2px);
+        left: 0;
+        width: 100%;
+        max-height: calc(5 * 2.4rem);
+        overflow-y: auto;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+        background: var(--surface, #fff);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        display: none;
+        z-index: 40;
+      }
+      .search-select-list.is-open {
+        display: block;
+      }
+      .search-select-option {
+        padding: 0.4rem 0.6rem;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .search-select-option:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+      .search-select-option.is-empty {
+        cursor: default;
+        color: var(--muted);
+      }
+      .search-select-option.is-empty:hover {
+        background: transparent;
+      }
+      .chart-fallback {
+        padding:.75rem;
+        text-align:center;
+        color:var(--muted);
+      }
+      .search-select-list::-webkit-scrollbar {
+        width: 6px;
+      }
+      .search-select-list::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.15);
+        border-radius: 3px;
+      }
+      .search-select-input[readonly] {
+        background: rgba(0, 0, 0, 0.05);
+        cursor: not-allowed;
+      }
+      .dash-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: .75rem;
+        margin-bottom: 1rem;
+      }
+      .dash-card {
+        background: var(--panel);
+        border: 1px solid rgba(148,163,184,.2);
+        border-radius: 16px;
+        padding: 1rem;
+        box-shadow: 0 8px 24px rgba(0,0,0,.08);
+      }
+      .dash-filters {
+        display:flex;
+        flex-wrap:wrap;
+        gap:.75rem;
+        align-items:flex-end;
+        margin-bottom:1rem;
+      }
+      .dash-filters label {
+        display:flex;
+        flex-direction:column;
+        font-size:.85rem;
+        min-width:160px;
+      }
+      .dash-table {
+        width:100%;
+        border-collapse:collapse;
+        font-size:.9rem;
+      }
+      .dash-table th,
+      .dash-table td {
+        padding:.45rem .35rem;
+        border-bottom:1px solid rgba(148,163,184,.2);
+        text-align:left;
+      }
+      .hidden-input-group {
+        display:none;
+        gap:.5rem;
+      }
+      .dash-section-title {
+        font-weight:600;
+        margin-bottom:.35rem;
+      }
+      .funnel-steps {
+        display:flex;
+        flex-direction:column;
+        gap:.4rem;
+      }
+      .funnel-step {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        padding:.35rem .6rem;
+        border-radius:999px;
+        background:linear-gradient(90deg,var(--primary),rgba(79,70,229,.4));
+        color:#fff;
+      }
+      .funnel-step:nth-child(2){opacity:.85;}
+      .funnel-step:nth-child(3){opacity:.7;}
+      .funnel-step:nth-child(4){opacity:.55;}
+    </style>
+  </head>
+
+  <body class="login-body app-loading">
+    <section id="login" class="login-root" data-theme="light">
+      <div class="login-wrapper">
+        <div class="login-card">
+          <img id="logoKensaBroker" class="login-logo" src="Imagenes/Kensa-Broker.png" alt="Kensa Broker" />
+
+          <p class="login-subtitle">Ingresa con tu correo y clave registrados</p>
+
+          <form id="loginForm" autocomplete="on">
+            <div class="form-group">
+              <label for="loginEmail">Correo</label>
+              <input id="loginEmail" name="loginEmail" type="email" placeholder="Correo" required />
+            </div>
+            <div class="form-group">
+              <label for="loginPassword">Clave</label>
+              <input id="loginPassword" name="loginPassword" type="password" placeholder="********" required />
+            </div>
+            <div class="login-remember-row">
+              <input type="checkbox" id="rememberMeToggle" name="rememberMeToggle" />
+              <label for="rememberMeToggle">Recordarme</label>
+            </div>
+            <div class="login-actions">
+              <button class="btn" id="btnLogin" type="submit">Ingresar</button>
+            </div>
+            <a href="#" id="linkForgotPassword" class="login-forgot">¿Olvidaste tu contraseña?</a>
+          </form>
+
+          <div class="login-footer">
+            <a href="https://www.kensa.cl/" target="_blank" rel="noopener noreferrer">By Kensa SPA</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="hidden app-root" id="app">
+      <header class="app">
+        <div class="brand header-left">
+          <button class="mobile-nav-toggle" id="btnMobileNav" type="button" aria-label="Abrir filtros">
+            <span class="mobile-nav-icon" aria-hidden="true"></span>
+          </button>
+          <img id="logoCorredora" class="logo-corredora hidden" src="" alt="Logo corredora" />
+          <div class="header-divider"></div>
+          <img id="logoKonectaCuadrado" class="logo logo-konecta-cuadrado" src="Imagenes/kensa-favicon.png" alt="Logo Kensa-Broker"/>
+          <div class="header-user-info">
+            <div class="header-user-role" id="headerUserRole">USUARIO</div>
+            <div class="header-user-name" id="headerUserName">-</div>
+            <div style="color:var(--muted)">
+              <span id="env" class="hidden"></span>
+            </div>
+            <span id="userChip" class="hidden">-</span>
+          </div>
+        </div>
+       
+        <div class="app-header-actions">
+          <input id="q" placeholder="🔎    Buscar clientes... ( / )" />
+          <button class="btn" id="btnNew">Nuevo negocio</button>
+          <button class="btn secondary" id="btnExport">Exportar</button>
+          <input accept=".xlsx" hidden id="importFileInput" type="file" />
+          <button class="btn secondary" id="importButton">Importar</button>
+          <button class="btn secondary" id="btnUsers">Usuarios</button>
+          <button id="btnClientes" class="btn secondary">Clientes</button>
+          <button class="btn secondary" id="btnTheme" data-theme-toggle="true">Tema</button>
+          <button class="btn warn" id="btnLogout">Salir</button>
+        </div>
+        <div class="editor-header-actions">
+          <button class="btn secondary editor-action" id="btnEditorExit" type="button">Cerrar</button>
+          <button class="btn editor-action" id="btnEditorSave" type="button">Guardar cambios</button>
+        </div>
+        
+      </header>
+
+      <div class="layout" id="appLayout">
+        <aside class="panel panel-left" id="filtersCard">
+          <div class="sidebar-brand" id="sidebarBrand" aria-label="Usuario"></div>
+          <div class="filters-card-header">
+            <h3 class="filters-card-title">Filtros</h3>
+            <div class="filters-mode-toggle">
+              <button type="button" id="filtersModeGroups" class="filters-mode-btn active">Grupos</button>
+              <button type="button" id="filtersModeFilters" class="filters-mode-btn">Filtros</button>
+            </div>
+          </div>
+
+          <div id="filtersGroupsSection" class="filters-section">
+            <div class="filter-groups-grid">
+              <button type="button" class="filter-group-pill" data-group="nuevos">
+                <div class="filter-group-header">
+                  <div class="filter-group-title">NUEVOS</div>
+                  <span class="filter-group-count" data-group-count="nuevos">0</span>
+                </div>
+                <div class="filter-group-subtitle">Abierta, En renovación</div>
+              </button>
+              <button type="button" class="filter-group-pill" data-group="gestion">
+                <div class="filter-group-header">
+                  <div class="filter-group-title">EN GESTIÓN</div>
+                  <span class="filter-group-count" data-group-count="gestion">0</span>
+                </div>
+                <div class="filter-group-subtitle">Propuesta enviada</div>
+              </button>
+              <button type="button" class="filter-group-pill" data-group="finalizados">
+                <div class="filter-group-header">
+                  <div class="filter-group-title">FINALIZADOS</div>
+                  <span class="filter-group-count" data-group-count="finalizados">0</span>
+                </div>
+                <div class="filter-group-subtitle">Póliza emitida, Renovaciones</div>
+              </button>
+              <button type="button" class="filter-group-pill" data-group="desistidos">
+                <div class="filter-group-header">
+                  <div class="filter-group-title">DESISTIDOS</div>
+                  <span class="filter-group-count" data-group-count="desistidos">0</span>
+                </div>
+                <div class="filter-group-subtitle">Desistida, Pérdida</div>
+              </button>
+            </div>
+            <div class="filters-divider"></div>
+            <div class="filters-quick-actions">
+              <label style="display:flex;align-items:center;gap:.4rem;white-space:nowrap">
+                <span>Solo mis negocios</span>
+                <input id="fSoloMias" type="checkbox" />
+              </label>
+              <button class="btn secondary" id="btnCSV">Exportar CSV</button>
+            </div>
+          </div>
+
+          <div id="filtersFormSection" class="filters-section hidden">
+            <label>Tipo
+              <select id="fTipo">
+                <option value="">Todos</option>
+                <option>Vehículo</option>
+                <option>Hogar</option>
+                <option>Vida</option>
+                <option>Salud</option>
+                <option>Viaje</option>
+                <option>SOAP</option>
+                <option>TRC</option>
+                <option>Otro</option>
+              </select>
+            </label>
+
+            <label>Estado
+              <select id="fEstado">
+                <option value="">Todos</option>
+                <option>Abierta</option>
+                <option>En renovación</option>
+                <option>Propuesta enviada</option>
+                <option>Póliza emitida</option>
+                <option>Desistida</option>
+                <option>Pérdida</option>
+                <option>Renovada</option>
+                <option>Renovada con modificación</option>
+              </select>
+            </label>
+
+            <label>Prioridad
+              <select id="fPrioridad">
+                <option value="">Todas</option>
+                <option>Alta</option>
+                <option>Media</option>
+                <option>Baja</option>
+              </select>
+            </label>
+
+            <label>Vencimiento
+              <select id="fVenc">
+                <option value="">Cualquiera</option>
+                <option value="vencidas">Vencidas</option>
+                <option value="hoy">Hoy</option>
+                <option value="7">Próx. 7 días</option>
+                <option value="30">Próx. 30 días</option>
+              </select>
+            </label>
+
+            <label>Compañía
+              <select id="fCompania">
+                <option value="">Todas</option>
+                <option>Sin Asignar</option>
+                <option>SURA</option>
+                <option>BCI</option>
+                <option>Consorcio</option>
+                <option>HDI</option>
+                <option>MAPFRE</option>
+                <option>Liberty</option>
+                <option>Zurich</option>
+              </select>
+            </label>
+
+            <label>Tags
+              <select id="fTags">
+                <option value="">Todos</option>
+                <option>⭐️</option>
+                <option>⭐️⭐️</option>
+                <option>⭐️⭐️⭐️</option>
+              </select>
+            </label>
+            <div style="margin-top:1rem">
+              <button class="btn secondary" id="btnBackup">Descargar JSON</button>
+            </div>
+          </div>
+
+        </aside>
+
+        <div class="sidebar-actions" id="sidebarActions" aria-label="Acciones rapidas"></div>
+
+        <main class="panel">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+            <div id="bulkActionsInline" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+              <span class="chip" id="countLabel">0 negocios</span>
+              <button class="btn warn hidden bulk-action" id="btnDeleteSelected" type="button">Eliminar</button>
+              <button class="btn secondary hidden bulk-action" id="btnBulkStatus" type="button">Cambiar estado</button>
+              <button class="btn secondary hidden bulk-action" id="btnBulkAssign" type="button">Asignar A:</button>
+              <button class="btn secondary hidden bulk-action" id="btnBulkActions" type="button">+</button>
+            </div>
+              <div class="header-right">
+                  <div class="dashboard-actions-bar">
+                    <div id="dashboardToggleWrap">
+                      <button id="btnDashboardToggle" class="btn ghost" type="button">Dashboard KPIs</button>
+                    </div>
+                    <div class="dashboard-actions hidden" id="dashboardActionsRow">
+                    <button id="btnDashboardToggleGoal" class="btn secondary" type="button">Configurar meta</button>
+                    <button id="btnDashboardViewDeals" class="btn ghost" type="button">Ver negocios</button>
+                    <button id="btnDashboardFiltersToggle" class="btn ghost" type="button" aria-label="Filtros">⛃</button>
+                  </div>
+                </div>
+                <div class="lus-client-chip">
+                  <div class="lus-client-status">
+                    <span class="lus-client-chip__label">Estado actual:</span>
+                    <span class="value" id="chipStatus">-</span>
+                  </div>
+                  <div class="lus-client-info">
+                    <span class="lus-client-chip__label">Cliente:</span>
+                    <span class="value" id="chipFirstName">-</span>
+                    <span class="value" id="chipLastName">-</span>
+                  </div>
+                  <div class="lus-client-tags" id="chipTags"></div>
+                </div>
+              </div>
+            </div>
+
+          <section id="dashboardSummary" class="hidden" style="margin-bottom:1rem">
+            <div id="dashboardFilters" class="dashboard-filters">
+              <div class="dashboard-range-wrapper">
+                <label>Rango de fechas
+                  <select id="dashFilterRange">
+                    <option value="last30">Últimos 30 días</option>
+                    <option value="currentMonth">Mes actual</option>
+                    <option value="last3">Últimos 3 meses</option>
+                    <option value="last6">Últimos 6 meses</option>
+                    <option value="last12">Últimos 12 meses</option>
+                    <option value="year">Año calendario</option>
+                    <option value="custom">Rango personalizado</option>
+                  </select>
+                </label>
+                <div id="dashCustomRangeGroup" class="dashboard-custom-range">
+                  <label>Desde
+                    <input type="date" id="dashCustomFrom" />
+                  </label>
+                  <label>Hasta
+                    <input type="date" id="dashCustomTo" />
+                  </label>
+                </div>
+              </div>
+              <label>Ejecutivo
+                <select id="dashFilterExecutive"></select>
+              </label>
+              <label>Compañía aseguradora
+                <select id="dashFilterCompany"></select>
+              </label>
+              <label>Ramo / Producto
+                <select id="dashFilterProduct"></select>
+              </label>
+            </div>
+
+            <div class="dash-grid" id="dashboardKpiCards">
+              <div class="dash-card">
+                <div class="dash-section-title">Prima Emitida (UF)</div>
+                <div class="stat-value" id="kpiPrimaValue">—</div>
+                <div class="muted" id="kpiPrimaSubtitle">—</div>
+              </div>
+              <div class="dash-card">
+                <div class="dash-section-title">Recaudación (UF)</div>
+                <div class="stat-value" id="kpiCommissionValue">—</div>
+                <div class="muted" id="kpiCommissionSubtitle">—</div>
+              </div>
+              <div class="dash-card">
+                <div class="dash-section-title">% Recaudación</div>
+                <div class="stat-value" id="kpiCommissionPct">—</div>
+                <div class="muted" id="kpiCommissionPctSubtitle">—</div>
+              </div>
+              <div class="dash-card">
+                <div class="dash-section-title">Negocios ganados</div>
+                <div class="stat-value" id="kpiDealsValue">—</div>
+                <div class="muted" id="kpiDealsSubtitle">—</div>
+              </div>
+            </div>
+
+            <div class="dash-grid charts-grid" id="dashboardChartsRow">
+              <div class="dash-card chart-card">
+                <div class="dash-section-title">Prima y Comisión por Compañía</div>
+                <canvas id="chartPrimaCompany"></canvas>
+              </div>
+              <div class="dash-card chart-card" id="dashboardFunnelCard">
+                <div class="dash-section-title">Embudo de Ventas</div>
+                <div id="funnelContainer" class="funnel-container"></div>
+              </div>
+              <div class="dash-card chart-card">
+                <div class="dash-section-title dash-section-header">
+                  <span>Prima y Comisión vs Meta</span>
+                  <div class="kpi-granularity-controls">
+                    <span id="kpiGranularityLabel" class="kpi-granularity-label">Detalle (auto)</span>
+                    <div class="kpi-granularity-toggle">
+                      <button type="button" class="granularity-btn granularity-active" data-mode="auto">Auto</button>
+                      <button type="button" class="granularity-btn" data-mode="day">Días</button>
+                      <button type="button" class="granularity-btn" data-mode="week">Semanas</button>
+                      <button type="button" class="granularity-btn" data-mode="month">Meses</button>
+                    </div>
+                  </div>
+                </div>
+                <canvas id="chartPrimaMeta"></canvas>
+              </div>
+            </div>
+
+              <div class="dash-card dashboard-table-card">
+              <div class="dash-section-title">Detalle de negocios</div>
+              <div class="table-scroll" style="max-height:420px">
+                <table class="dash-table">
+                  <thead>
+                    <tr>
+                      <th>ID de negocio</th>
+                      <th>Cliente</th>
+                      <th>Ejecutivo</th>
+                      <th>Compañía</th>
+                      <th>Ramo</th>
+                      <th>Prima (UF)</th>
+                      <th>Comisión (UF)</th>
+                      <th>Estado</th>
+                      <th>Fecha</th>
+                      <th>Fecha de emisión</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashDealsTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <div class="card table-scroll" id="tableCard">
+            <div id="tableView">
+              <table id="tbl">
+                <thead>
+                  <tr>
+                    <th><input id="checkAll" type="checkbox" /></th>
+                    <th>Negocio</th>
+                    <th>Póliza</th>
+                    <th>Compañía</th>
+                    <th>Cliente</th>
+                    <th>Asignado</th>
+                    <th>Creada</th>
+                    <th>Vence</th>
+                    <th>Estado</th>
+                    <th>Tags</th>
+                    <th>Actualización</th>
+                    <th>GESTIONAR</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody"></tbody>
+              </table>
+
+              <div class="paginator" id="tasksPaginator">
+                <div class="right">
+                  <label>Casos por página:
+                    <select id="perPage">
+                      <option value="8" selected>8</option>
+                      <option value="15">15</option>
+                      <option value="30">30</option>
+                      <option value="60">60</option>
+                      <option value="100">100</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="right">
+                  <button class="btn secondary" id="btnPrev">Atrás</button>
+                  <span id="pageInfo">1/1</span>
+                  <button class="btn secondary" id="btnNext">Siguiente</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="hidden dashboard-view" id="dashboardCard">
+              <div class="dash-grid" id="dashCompanies"></div>
+              <div class="dash-grid hidden" id="dashStatuses"></div>
+              <div style="margin-top:.5rem">
+                <button class="btn secondary hidden" id="btnDashBack">Volver</button>
+              </div>
+            </div>
+
+            <!-- Inline: Interior del caso (v1.0) -->
+            <div class="hidden" id="caseEditor" style="margin-top:.75rem">
+
+              <!-- Datos generales + cliente + asegurado -->
+              <div class="case-carousel">
+              <div class="case-cards-row">
+                <div class="card case-card-base">
+                  <div class="section-title">Datos Generales</div>
+                  <div class="grid-2">
+                    <label style="grid-column:1/-1">ID del negocio
+                      <input id="ce_taskTitle" readonly />
+                    </label>
+                    <label style="grid-column:1/-1">Canal de ingreso
+                      <select id="ce_taskChannel">
+                        <option value="">Seleccionar...</option>
+                        <option value="Canal web">Canal web</option>
+                        <option value="Renovación">Renovación</option>
+                        <option value="Tradicional">Tradicional</option>
+                      </select>
+                    </label>
+                    <label>Prioridad
+                      <select id="ce_taskPriority">
+                        <option>Alta</option>
+                        <option>Media</option>
+                        <option>Baja</option>
+                      </select>
+                    </label>
+                    <label>Estado
+                      <select id="ce_taskStatus">
+                        <option>Abierta</option>
+                        <option>En renovación</option>
+                        <option>Propuesta enviada</option>
+                        <option>Póliza emitida</option>
+                        <option>Desistida</option>
+                        <option>Pérdida</option>
+                        <option>Renovada</option>
+                        <option>Renovada con modificación</option>
+                      </select>
+                    </label>
+                    <label>Vencimiento
+                      <input id="ce_taskDue" type="date" readonly />
+                    </label>
+                    <label>Asignado a
+                      <input id="ce_taskAssignee" list="assigneeList" placeholder="correo@corredora.cl" />
+                    </label>
+                </div>
+              </div>
+
+                <div class="card">
+                  <div class="section-title">Cliente</div>
+                  <div class="grid-2">
+                    <label>Nombres
+                      <input id="ce_firstName" maxlength="50" />
+                    </label>
+                    <label>Apellidos
+                      <input id="ce_lastName" maxlength="50" />
+                    </label>
+                    <label style="grid-column:1/-1">RUT
+                      <input id="ce_rut" maxlength="12" />
+                    </label>
+                    <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem">
+                      <label>Correo
+                        <input id="ce_email" maxlength="60" type="email" />
+                      </label>
+                      <label>Teléfono
+                        <input id="ce_phone" inputmode="numeric" maxlength="9" pattern="[0-9]*" />
+                      </label>
+                    </div>
+                    <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem">
+                      <label>Tipo de cliente
+                        <select id="ce_customerType">
+                          <option value="natural">Persona Natural</option>
+                          <option value="juridica">Persona Jurídica</option>
+                        </select>
+                      </label>
+                      <label>Tags
+                        <select id="ce_taskTags">
+                          <option value="">Sin clasificación</option>
+                          <option>⭐️</option>
+                          <option>⭐️⭐️</option>
+                          <option>⭐️⭐️⭐️</option>
+                        </select>
+                      </label>
+                    </div>
+                    <label style="grid-column:1/-1">Dirección
+                      <input id="ce_clientAddress" />
+                    </label>
+                    <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem">
+                      <div>
+                        <label for="clienteRegionSearch">Región</label>
+                        <div class="search-select" data-type="region" data-target-input="ce_clientRegion">
+                          <input
+                            autocomplete="off"
+                            class="search-select-input"
+                            id="clienteRegionSearch"
+                            placeholder="Buscar región..."
+                            type="text"
+                          />
+                          <div class="search-select-list" id="clienteRegionList"></div>
+                          <input type="hidden" id="ce_clientRegion" />
+                        </div>
+                      </div>
+                      <div>
+                        <label for="clienteComunaSearch">Comuna</label>
+                        <div class="search-select" data-type="comuna" data-target-input="ce_clientCommune">
+                          <input
+                            autocomplete="off"
+                            class="search-select-input"
+                            id="clienteComunaSearch"
+                            placeholder="Buscar comuna..."
+                            type="text"
+                          />
+                          <div class="search-select-list" id="clienteComunaList"></div>
+                          <input type="hidden" id="ce_clientCommune" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card">
+                  <div class="section-title-row">
+                    <div class="section-title">Asegurado</div>
+                    <label class="use-client-toggle">
+                      <input id="ce_usePersonal" type="checkbox" /> Usar datos Cliente
+                    </label>
+                  </div>
+                  <div class="grid-2">
+                    <label>Nombres
+                      <input id="ce_payFirstName" />
+                    </label>
+                    <label>Apellidos
+                      <input id="ce_payLastName" />
+                    </label>
+                    <label style="grid-column:1/-1">RUT
+                      <input id="ce_payRut" />
+                    </label>
+                    <label>Correo
+                      <input id="ce_payEmail" type="email" />
+                    </label>
+                    <label>Teléfono
+                      <input id="ce_payPhone" />
+                    </label>
+                    <label style="grid-column:1/-1">Tipo de cliente
+                      <select id="ce_payType">
+                        <option value="natural">Persona Natural</option>
+                        <option value="juridica">Persona Jurídica</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="case-cards-row">
+                <div class="card">
+                  <div class="section-title">Póliza</div>
+                  <div class="grid-2">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem">
+                      <label>Compañía
+                        <select id="ce_taskInsurer">
+                          <option>Sin Asignar</option>
+                          <option>Aseguradora Porvenir S.A. (76.598.625-7)</option>
+                          <option>Assurant Chile Compañía de Seguros Generales S.A. (76.212.519-6)</option>
+                          <option>BCI Seguros Generales S.A. (99.147.000-K)</option>
+                          <option>BNP Paribas Cardif Seguros Generales S.A. (96.837.640-3)</option>
+                          <option>Chubb Seguros Chile S.A. (99.225.000-3)</option>
+                          <option>Compañía de Seguros Generales Consorcio Nacional de Seguros S.A. (96.654.180-6)</option>
+                          <option>Compañía de Seguros Generales Continental S.A. (76.039.758-K)</option>
+                          <option>Contempora Compañía de Seguros Generales S.A. (76.981.875-8)</option>
+                          <option>Everest Compañía de Seguros Generales Chile S.A. (77.591.207-3)</option>
+                          <option>FID Chile Seguros Generales S.A. (77.096.952-2)</option>
+                          <option>HDI Seguros S.A. (99.061.000-2)</option>
+                          <option>Liberty Mutual Surety Seguros Chile S.A. (78.027.718-1)</option>
+                          <option>MAPFRE Compañía de Seguros Generales de Chile S.A. (96.508.210-7)</option>
+                          <option>MetLife Chile Seguros Generales S.A. (76.328.793-9)</option>
+                          <option>Mutualidad de Carabineros (99.024.000-0)</option>
+                          <option>Orion Seguros Generales S.A. (76.042.965-1)</option>
+                          <option>Reale Chile Seguros Generales S.A. (76.743.492-8)</option>
+                          <option>Renta Nacional Compañía de Seguros Generales S.A. (94.510.000-1)</option>
+                          <option>Seguros Generales Suramericana S.A. (99.017.000-2)</option>
+                          <option>Southbridge Compañía de Seguros Generales S.A. (99.288.000-7)</option>
+                          <option>Starr International Seguros Generales S.A. (76.620.932-7)</option>
+                          <option>Unnio Seguros Generales S.A. (76.173.258-7)</option>
+                          <option>Zenit Seguros Generales S.A. (76.061.223-5)</option>
+                          <option>Zurich Chile Seguros Generales S.A. (99.037.000-1)</option>
+                          <option>Zurich Santander Seguros Generales Chile S.A. (76.590.840-K)</option>
+                          <option>4 Life Seguros de Vida S.A. (76.418.751-2)</option>
+                          <option>Alemana Seguros S.A. (76.511.423-3)</option>
+                          <option>Augustar Seguros de Vida S.A. (76.632.384-7)</option>
+                          <option>BCI Seguros Vida S.A. (96.573.600-K)</option>
+                          <option>BICE Vida Compañía de Seguros S.A. (96.656.410-5)</option>
+                          <option>BNP Paribas Cardif Seguros de Vida S.A. (96.837.630-6)</option>
+                          <option>Bupa Compañía de Seguros de Vida S.A. (76.282.191-5)</option>
+                          <option>CF Seguros de Vida S.A. (76.477.116-8)</option>
+                          <option>Chubb Seguros de Vida Chile S.A. (99.588.060-1)</option>
+                          <option>CN Life, Compañía de Seguros de Vida S.A. (96.579.280-5)</option>
+                          <option>Colmena Compañía de Seguros de Vida S.A. (76.408.757-7)</option>
+                          <option>Compañía de Seguros Confuturo S.A. (96.571.890-7)</option>
+                          <option>Compañía de Seguros de Vida Cámara S.A. (99.003.000-6)</option>
+                          <option>Compañía de Seguros de Vida Consorcio Nacional de Seguros S.A. (99.012.000-5)</option>
+                          <option>Divina Pastora Seguros de Vida S.A. (77.205.281-2)</option>
+                          <option>EuroAmerica Seguros de Vida S.A. (99.279.000-8)</option>
+                          <option>Help Seguros de Vida S.A. (76.213.329-6)</option>
+                          <option>MAPFRE Compañía de Seguros de Vida de Chile S.A. (96.933.030-K)</option>
+                          <option>MetLife Chile Seguros de Vida S.A. (99.289.000-2)</option>
+                          <option>Mutual de Seguros de Chile (70.015.730-K)</option>
+                          <option>Mutualidad del Ejército y Aviación (99.025.000-6)</option>
+                          <option>Penta Vida Compañía de Seguros de Vida S.A. (96.812.960-0)</option>
+                          <option>Principal Compañía de Seguros de Vida Chile S.A. (96.588.080-1)</option>
+                          <option>Renta Nacional Compañía de Seguros de Vida S.A. (94.716.000-1)</option>
+                          <option>Save Compañía de Seguros de Vida S.A. (76.034.737-K)</option>
+                          <option>Seguros CLC S.A. (76.573.480-0)</option>
+                          <option>Seguros de Vida SURA S.A. (96.549.050-7)</option>
+                          <option>Seguros de Vida Suramericana S.A. (76.263.414-7)</option>
+                          <option>Seguros de Vida y Salud UC Christus S.A. (76.632.553-K)</option>
+                          <option>Seguros Vida Security Previsión S.A. (99.301.000-6)</option>
+                          <option>Zurich Chile Seguros de Vida S.A. (99.185.000-7)</option>
+                          <option>Zurich Santander Seguros de Vida Chile S.A. (96.819.630-8)</option>
+                        </select>
+                      </label>
+                      <label>Ramo
+                        <select id="ce_taskType">
+                          <option>Vehículo</option>
+                          <option>Hogar</option>
+                          <option>Vida</option>
+                          <option>Salud</option>
+                          <option>Viaje</option>
+                          <option>SOAP</option>
+                          <option>TRC</option>
+                          <option>Otro</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem">
+                      <label>N° de póliza
+                        <input id="ce_policyNumber" />
+                      </label>
+                      <label>Fecha de emisión
+                        <input id="ce_policyIssueDate" type="date" />
+                      </label>
+                    </div>
+                    <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem">
+                      <label>Inicio de vigencia
+                        <input id="ce_renPreaviso" type="date" />
+                      </label>
+                      <label>Término de vigencia
+                        <input id="ce_renDecision" type="date" />
+                      </label>
+                    </div>
+                    <div class="policy-amounts-row" style="grid-column:1/-1;display:grid;gap:.5rem">
+                      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem">
+                        <label>Prima total (UF)
+                          <input id="ce_policyPremium" type="number" min="0" max="999" step="0.01" />
+                        </label>
+                        <label>% Comisión corredor
+                          <input id="ce_policyCommissionPct" type="number" min="0" max="99" step="0.01" />
+                        </label>
+                      </div>
+                      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem">
+                        <div id="field-total-comision-corredor">
+                          <label>Total comisión corredor (UF)
+                            <input id="ce_policyCommissionTotal" readonly />
+                          </label>
+                        </div>
+                        <div id="field-comision-agente">
+                          <label>Comisión de Agente (UF)
+                            <input id="ce_policyAgentCommission" readonly />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    <label style="grid-column:1/-1">Motivo de pérdida
+                      <select id="ce_renMotivo"></select>
+                    </label>
+                    <label style="grid-column:1/-1">Comentario
+                      <textarea id="ce_renComentario" rows="2"></textarea>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="card">
+                  <div class="section-title">Vehículo</div>
+                  <div class="grid-2">
+                    <label>Marca
+                      <input id="ce_vehicleMake" />
+                    </label>
+                    <label>Modelo
+                      <input id="ce_vehicleModel" />
+                    </label>
+                    <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem">
+                      <label>Año
+                        <input id="ce_vehicleYear" type="number" min="1900" max="2099" />
+                      </label>
+                      <label>Patente
+                        <input id="ce_vehiclePlate" maxlength="6" minlength="6" />
+                      </label>
+                    </div>
+                    <label>Color
+                      <input id="ce_vehicleColor" />
+                    </label>
+                    <label>Chasis
+                      <input id="ce_vehicleChassis" maxlength="17" minlength="17" />
+                    </label>
+                    <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem">
+                      <label>Tipo de combustible
+                        <select id="ce_vehicleFuel">
+                          <option value="">Seleccionar</option>
+                          <option>Bencina</option>
+                          <option>Diesel</option>
+                          <option>Eléctrico</option>
+                          <option>Híbrido</option>
+                        </select>
+                      </label>
+                      <label>Tipo de vehículo
+                        <select id="ce_vehicleType">
+                          <option value="">Seleccionar</option>
+                          <option>Liviano</option>
+                          <option>Pesado</option>
+                        </select>
+                      </label>
+                    </div>
+                    <label style="grid-column:1/-1" class="use-client-toggle">
+                      <input id="ce_vehicleFleet" type="checkbox" /> Flota
+                    </label>
+                  </div>
+                </div>
+
+                <div class="card">
+                  <div class="section-title-row">
+                    <div class="section-title">Dirección del riesgo</div>
+                    <label class="use-client-toggle">
+                      <input id="ce_useRiskClient" type="checkbox" /> Usar dirección Cliente
+                    </label>
+                  </div>
+                  <div class="grid-2">
+                    <label style="grid-column:1/-1">Dirección
+                      <input id="ce_riskAddress" />
+                    </label>
+                    <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem">
+                      <div>
+                        <label for="riesgoRegionSearch">Región</label>
+                        <div class="search-select" data-type="region" data-target-input="ce_riskRegion">
+                          <input
+                            autocomplete="off"
+                            class="search-select-input"
+                            id="riesgoRegionSearch"
+                            placeholder="Buscar región..."
+                            type="text"
+                          />
+                          <div class="search-select-list" id="riesgoRegionList"></div>
+                          <input type="hidden" id="ce_riskRegion" />
+                        </div>
+                      </div>
+                      <div>
+                        <label for="riesgoComunaSearch">Comuna</label>
+                        <div class="search-select" data-type="comuna" data-target-input="ce_riskCommune">
+                          <input
+                            autocomplete="off"
+                            class="search-select-input"
+                            id="riesgoComunaSearch"
+                            placeholder="Buscar comuna..."
+                            type="text"
+                          />
+                          <div class="search-select-list" id="riesgoComunaList"></div>
+                          <input type="hidden" id="ce_riskCommune" />
+                        </div>
+                      </div>
+                    </div>
+                    <label style="grid-column:1/-1">Tipo de inmueble
+                      <select id="ce_riskPropertyType">
+                        <option value="">Seleccionar</option>
+                        <option>Casa</option>
+                        <option>Departamento</option>
+                        <option>Oficina</option>
+                        <option>Industrial</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              </div>
+
+              <div class="card" style="grid-column:1/-1;margin-bottom:10px">
+                  <div class="section-title">Documentos</div>
+                  <input
+                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg"
+                    id="ce_files"
+                    multiple
+                    type="file"
+                  />
+                  <div class="grid" id="ce_filesList" style="margin-top:.5rem"></div>
+                  </div>
+
+                <div class="card case-log-card" style="grid-column:1/-1">
+                  <div class="section-title">Bitácora</div>
+                  <div class="grid-2">
+                    <textarea id="ce_comment" placeholder="Escribe un comentario" rows="2"></textarea>
+                    <div class="toolbar" style="align-items:flex-start;justify-content:flex-end">
+                      <button class="btn secondary" id="ce_addComment" type="button">Agregar comentario</button>
+                    </div>
+                  </div>
+                  <div class="grid" id="ce_comments" style="margin-top:.5rem"></div>
+                </div>
+              </div>
+
+              <div class="toolbar editing-inline-actions" style="display:none;justify-content:flex-end;margin-top:.75rem">
+                <button class="btn secondary" id="ce_exit" type="button">Cerrar</button>
+                <button class="btn" id="ce_save" type="button">Guardar cambios</button>
+              </div>
+            </div>
+            <!-- /Inline: Interior del caso -->
+          </div>
+
+        </main>
+
+        <div class="kensa-footer">
+          <div class="kensa-footer__line"><span>By Kensa SPA</span></div>
+          <a href="https://www.kensa.cl/" target="_blank" rel="noopener">Conoce sobre nosotros</a>
+        </div>
+
+      </div>
+    </section>
+    <div class="modal-blur hidden" id="requiredParamModal" aria-hidden="true">
+      <div class="modal-blur__card">
+        <h3>Antes de guardar tus cambios</h3>
+        <p id="requiredParamMessage"></p>
+        <div class="modal-blur__actions">
+          <button type="button" id="requiredParamClose" class="btn">Aceptar</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-modal hidden" id="formModal" aria-hidden="true">
+      <div class="panel panel-right">
+        <h3 id="formTitle">Nuevo negocio</h3>
+
+        <form id="taskForm" style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <input id="taskId" name="taskId" type="hidden" />
+          <input id="title" name="title" type="hidden" />
+
+            <label>Ramo
+              <select id="type" name="type">
+                <option>Vehículo</option>
+                <option>Hogar</option>
+                <option>Vida</option>
+                <option>Salud</option>
+                <option>Viaje</option>
+                <option>SOAP</option>
+                <option>TRC</option>
+                <option>Otro</option>
+              </select>
+            </label>
+            <label>Compañía
+              <select id="insurer" name="insurer">
+                <option>Sin Asignar</option>
+                <option>Aseguradora Porvenir S.A. (76.598.625-7)</option>
+                <option>Assurant Chile Compañía de Seguros Generales S.A. (76.212.519-6)</option>
+                <option>BCI Seguros Generales S.A. (99.147.000-K)</option>
+                <option>BNP Paribas Cardif Seguros Generales S.A. (96.837.640-3)</option>
+                <option>Chubb Seguros Chile S.A. (99.225.000-3)</option>
+                <option>Compañía de Seguros Generales Consorcio Nacional de Seguros S.A. (96.654.180-6)</option>
+                <option>Compañía de Seguros Generales Continental S.A. (76.039.758-K)</option>
+                <option>Contempora Compañía de Seguros Generales S.A. (76.981.875-8)</option>
+                <option>Everest Compañía de Seguros Generales Chile S.A. (77.591.207-3)</option>
+                <option>FID Chile Seguros Generales S.A. (77.096.952-2)</option>
+                <option>HDI Seguros S.A. (99.061.000-2)</option>
+                <option>Liberty Mutual Surety Seguros Chile S.A. (78.027.718-1)</option>
+                <option>MAPFRE Compañía de Seguros Generales de Chile S.A. (96.508.210-7)</option>
+                <option>MetLife Chile Seguros Generales S.A. (76.328.793-9)</option>
+                <option>Mutualidad de Carabineros (99.024.000-0)</option>
+                <option>Orion Seguros Generales S.A. (76.042.965-1)</option>
+                <option>Reale Chile Seguros Generales S.A. (76.743.492-8)</option>
+                <option>Renta Nacional Compañía de Seguros Generales S.A. (94.510.000-1)</option>
+                <option>Seguros Generales Suramericana S.A. (99.017.000-2)</option>
+                <option>Southbridge Compañía de Seguros Generales S.A. (99.288.000-7)</option>
+                <option>Starr International Seguros Generales S.A. (76.620.932-7)</option>
+                <option>Unnio Seguros Generales S.A. (76.173.258-7)</option>
+                <option>Zenit Seguros Generales S.A. (76.061.223-5)</option>
+                <option>Zurich Chile Seguros Generales S.A. (99.037.000-1)</option>
+                <option>Zurich Santander Seguros Generales Chile S.A. (76.590.840-K)</option>
+                <option>4 Life Seguros de Vida S.A. (76.418.751-2)</option>
+                <option>Alemana Seguros S.A. (76.511.423-3)</option>
+                <option>Augustar Seguros de Vida S.A. (76.632.384-7)</option>
+                <option>BCI Seguros Vida S.A. (96.573.600-K)</option>
+                <option>BICE Vida Compañía de Seguros S.A. (96.656.410-5)</option>
+                <option>BNP Paribas Cardif Seguros de Vida S.A. (96.837.630-6)</option>
+                <option>Bupa Compañía de Seguros de Vida S.A. (76.282.191-5)</option>
+                <option>CF Seguros de Vida S.A. (76.477.116-8)</option>
+                <option>Chubb Seguros de Vida Chile S.A. (99.588.060-1)</option>
+                <option>CN Life, Compañía de Seguros de Vida S.A. (96.579.280-5)</option>
+                <option>Colmena Compañía de Seguros de Vida S.A. (76.408.757-7)</option>
+                <option>Compañía de Seguros Confuturo S.A. (96.571.890-7)</option>
+                <option>Compañía de Seguros de Vida Cámara S.A. (99.003.000-6)</option>
+                <option>Compañía de Seguros de Vida Consorcio Nacional de Seguros S.A. (99.012.000-5)</option>
+                <option>Divina Pastora Seguros de Vida S.A. (77.205.281-2)</option>
+                <option>EuroAmerica Seguros de Vida S.A. (99.279.000-8)</option>
+                <option>Help Seguros de Vida S.A. (76.213.329-6)</option>
+                <option>MAPFRE Compañía de Seguros de Vida de Chile S.A. (96.933.030-K)</option>
+                <option>MetLife Chile Seguros de Vida S.A. (99.289.000-2)</option>
+                <option>Mutual de Seguros de Chile (70.015.730-K)</option>
+                <option>Mutualidad del Ejército y Aviación (99.025.000-6)</option>
+                <option>Penta Vida Compañía de Seguros de Vida S.A. (96.812.960-0)</option>
+                <option>Principal Compañía de Seguros de Vida Chile S.A. (96.588.080-1)</option>
+                <option>Renta Nacional Compañía de Seguros de Vida S.A. (94.716.000-1)</option>
+                <option>Save Compañía de Seguros de Vida S.A. (76.034.737-K)</option>
+                <option>Seguros CLC S.A. (76.573.480-0)</option>
+                <option>Seguros de Vida SURA S.A. (96.549.050-7)</option>
+                <option>Seguros de Vida Suramericana S.A. (76.263.414-7)</option>
+                <option>Seguros de Vida y Salud UC Christus S.A. (76.632.553-K)</option>
+                <option>Seguros Vida Security Previsión S.A. (99.301.000-6)</option>
+                <option>Zurich Chile Seguros de Vida S.A. (99.185.000-7)</option>
+                <option>Zurich Santander Seguros de Vida Chile S.A. (96.819.630-8)</option>
+              </select>
+            </label>
+
+          <label>Prioridad
+            <select id="priority" name="priority">
+              <option>Alta</option>
+              <option selected>Media</option>
+              <option>Baja</option>
+            </select>
+          </label>
+
+          <label>Canal de ingreso
+            <select id="taskChannel" name="taskChannel">
+              <option value="">Seleccionar...</option>
+              <option value="Canal web">Canal web</option>
+              <option value="Renovación">Renovación</option>
+              <option value="Tradicional">Tradicional</option>
+            </select>
+          </label>
+
+          <label>Vencimiento
+            <input id="due" name="due" type="date" />
+          </label>
+
+            <label>Nombres
+              <input id="firstName" name="firstName" />
+            </label>
+
+            <label>Apellidos
+              <input id="lastName" name="lastName" />
+            </label>
+
+            <label>Tipo de cliente
+              <select id="customerType" name="customerType">
+                <option value="natural">Persona Natural</option>
+                <option value="juridica">Persona Jurídica</option>
+              </select>
+            </label>
+
+            <label>RUT
+              <input id="nuevoNegocioRut" name="rut" placeholder="12345678-9" />
+            </label>
+
+            <label>Correo
+              <input id="email" name="email" type="email" placeholder="correo@cliente.cl" />
+            </label>
+
+            <label>Teléfono
+              <input id="phone" name="phone" type="tel" placeholder="+56 9 1234 5678" />
+            </label>
+
+            <label style="grid-column:1/-1">Tags
+              <select id="tags" name="tags">
+                <option value="">Sin clasificación</option>
+                <option>⭐️</option>
+                <option>⭐️⭐️</option>
+                <option>⭐️⭐️⭐️</option>
+              </select>
+            </label>
+
+          <div style="grid-column:1/-1;display:flex;gap:.5rem;justify-content:flex-end">
+            <button class="btn secondary" id="btnReset" type="button">Cancelar</button>
+            <button class="btn" id="btnSave">Guardar</button>
+          </div>
+        </form>
+        <datalist id="assigneeList"></datalist>
+
+        <p id="shortcutsHint" style="color:var(--muted)">
+          Atajos: <span class="kbd">N</span> nueva · <span class="kbd">/</span> buscar
+        </p>
+      </div>
+    </div>
+    <div id="infoToast" class="info-toast hidden">Información actualizada</div>
+    <div id="globalProgress" class="hidden"></div>
+    <div id="forgotDialog" class="modal hidden" aria-hidden="true">
+      <div class="modal-content" style="max-width:420px">
+        <h3>Recuperar contraseña</h3>
+        <p>Ingresa tu correo y define una nueva contraseña.</p>
+        <label style="display:block;margin-top:.5rem">Correo</label>
+        <input type="email" id="forgotEmail" placeholder="tu@corredora.cl" />
+        <label style="display:block;margin-top:.5rem">Nueva contraseña</label>
+        <input type="password" id="forgotPassword" placeholder="Nueva clave" />
+        <label style="display:block;margin-top:.5rem">Confirmar nueva contraseña</label>
+        <input type="password" id="forgotPasswordConfirm" placeholder="Repite la clave" />
+        <div class="actions" style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem">
+          <button id="btnForgotCancel" class="btn ghost" type="button">Cancelar</button>
+          <button id="btnForgotSubmit" class="btn primary" type="button">Guardar nueva contraseña</button>
+        </div>
+      </div>
+    </div>
+    <div id="logoutModal" class="modal-blur hidden" aria-hidden="true">
+      <div class="modal-blur__card">
+        <h3 class="modal-title">Estás apunto de salir</h3>
+        <p class="modal-description">Confirma para cerrar sesión</p>
+        <div class="modal-blur__actions">
+          <button id="logoutCancel" class="btn secondary" type="button">Cancelar</button>
+          <button id="logoutConfirm" class="btn warn" type="button">Cerrar sesión</button>
+        </div>
+      </div>
+    </div>
+    <div id="exportRangeModal" class="modal-blur hidden" aria-hidden="true">
+      <div class="modal-blur__card">
+        <h3 class="modal-title">Seleccione el rango de fecha</h3>
+        <div id="exportRangeWarning" class="export-range-warning hidden">Excede el rango máximo permitido de un año</div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.5rem">
+          <div class="form-group">
+            <label for="exportDesde">Desde</label>
+            <input id="exportDesde" type="date" />
+          </div>
+          <div class="form-group">
+            <label for="exportHasta">Hasta</label>
+            <input id="exportHasta" type="date" />
+          </div>
+        </div>
+        <div class="modal-blur__actions" style="justify-content:flex-end">
+          <button id="btnExportCerrar" class="btn secondary" type="button">Cerrar</button>
+          <button id="btnExportDescargar" class="btn" type="button">Descargar</button>
+        </div>
+      </div>
+    </div>
+    <div id="bulkActionsModal" class="modal-blur hidden" aria-hidden="true">
+      <div class="modal-blur__card bulk-actions-modal">
+        <div class="bulk-actions-modal__header">
+          <h3 class="modal-title">Acciones</h3>
+          <button id="bulkActionsClose" class="btn ghost" type="button" aria-label="Cerrar">✕</button>
+        </div>
+        <div id="bulkActionsBody" class="bulk-actions-list"></div>
+      </div>
+    </div>
+    <div id="metaModal" class="modal-blur hidden" aria-hidden="true">
+      <div class="modal-blur__card" id="dashboardGoalPanel">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;">
+          <h3 class="modal-title" style="margin:0">Meta</h3>
+          <button type="button" class="btn ghost" id="closeMetaModal" aria-label="Cerrar meta">✕</button>
+        </div>
+        <div class="modal-body" style="margin-top:.75rem;display:grid;gap:.75rem;max-height:70vh;overflow:auto;">
+          <label>Aplica desde (Mes/Año)
+            <input id="metaPeriodoDesde" type="month" />
+          </label>
+          <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+            <label>Meta global prima (UF)
+              <input id="globalGoalPremium" type="number" min="0" step="0.01" />
+            </label>
+            <label>Meta global de Recaudación (UF)
+              <input id="globalGoalCommission" type="number" min="0" step="0.01" />
+            </label>
+          </div>
+          <label>Meta global # negocios
+            <input id="globalGoalDeals" type="number" min="0" step="1" />
+          </label>
+          <label>Comentario (opcional)
+            <input id="metaComentario" type="text" maxlength="120" placeholder="Motivo del cambio" />
+          </label>
+          <div class="muted" id="globalGoalStatus"></div>
+          <div>
+            <div class="dash-section-title" style="margin:.25rem 0">Historial de metas</div>
+            <div class="table-scroll" style="max-height:240px">
+              <table class="dash-table">
+                <thead>
+                  <tr>
+                    <th>Período desde</th>
+                    <th>Período hasta</th>
+                    <th>Meta Prima (UF)</th>
+                    <th>Meta Comisión (UF)</th>
+                    <th>Usuario</th>
+                    <th>Fecha cambio</th>
+                    <th>Comentario</th>
+                  </tr>
+                </thead>
+                <tbody id="historialMetasBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-blur__actions" style="justify-content:flex-end;gap:.5rem">
+          <button class="btn secondary" type="button" id="btnMetaCancel">Cancelar</button>
+          <button class="btn primary" type="button" id="btnSaveGlobalGoal">Guardar meta</button>
+        </div>
+      </div>
+    </div>
+    <!-- Toast de éxito global -->
+    <div id="successToast" class="toast-success hidden">
+      <div class="toast-check-wrapper">
+        <svg class="toast-check-icon" viewBox="0 0 52 52">
+          <circle class="toast-check-circle" cx="26" cy="26" r="25" fill="none" />
+          <path class="toast-check-check" fill="none" d="M14 27 l7 7 17 -17" />
+        </svg>
+      </div>
+    </div>
+    <!-- Ultra-robust demo login injection -->
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

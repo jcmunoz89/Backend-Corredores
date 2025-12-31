@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kensa-Broker/ Clientes</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="Imagenes/kensa-favicon.png" type="image/png">
+  <style>
+    /* Fallbacks mínimos si faltan estilos específicos */
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);}
+    .wrap{max-width:1200px;margin:0 auto;padding:16px;}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .grow{flex:1}
+    input[type="text"], input[type="email"], input[type="tel"], select{
+      width:100%;padding:.6rem .7rem;border:1px solid rgba(148,163,184,.35);background:var(--panel);color:inherit;border-radius:.6rem
+    }
+    table{width:100%;border-collapse:collapse;font-size:.95rem}
+    thead th{text-align:left;font-weight:600;color:var(--muted);border-bottom:1px solid rgba(148,163,184,.35);padding:.6rem .5rem}
+    tbody td{border-bottom:1px solid rgba(148,163,184,.2);padding:.6rem .5rem;vertical-align:top}
+    .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.55rem .8rem;border-radius:.65rem;border:1px solid rgba(148,163,184,.4);background:var(--panel);color:inherit;cursor:pointer}
+    .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+    .btn.ghost{background:transparent}
+    .btn.warn{background:var(--warn);border-color:var(--warn);color:#fff}
+    .card{background:var(--panel);border:1px solid rgba(148,163,184,.2);border-radius:16px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+    .table-scroll{overflow:auto;max-height:60vh;border-radius:12px}
+    .chip{display:inline-flex;align-items:center;border:1px solid rgba(148,163,184,.35);border-radius:999px;padding:.15rem .55rem;font-size:.8rem;gap:.35rem}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+    .right{margin-left:auto}
+    .muted{color:var(--muted)}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .modal{position:fixed;inset:0;width:100vw;height:100vh;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:24px;z-index:1000;overflow:auto}
+    .modal.show{display:flex}
+    .modal .dialog{background:var(--panel);border:1px solid rgba(148,163,184,.2);border-radius:16px;max-width:720px;width:100%;padding:16px;box-shadow:0 12px 36px rgba(0,0,0,.4);max-height:90vh;overflow:auto}
+    body.modal-open{overflow:hidden}
+    .dialog header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .dialog footer{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+    .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .users-app-header {margin-bottom: 1rem;}
+    .users-app-header .brand {display: flex;align-items: center;gap: .75rem;}
+    .users-app-header .users-actions {display: flex;gap: .5rem;align-items: center;flex-wrap: wrap;}
+    .users-header-counter {margin-bottom: .5rem;display:flex;justify-content:flex-end;color:var(--muted);}
+    .users-title {font-weight:600;font-size:1.1rem;margin-bottom:.25rem;}
+    .users-title-row {display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
+    .logo-thumb {width:72px;height:48px;object-fit:contain;border-radius:10px;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.2);}
+    .logo-preview {display:block;margin-top:6px;}
+  </style>
+</head>
+<body>
+  <header class="app users-app-header">
+    <div class="brand header-left">
+      <img id="logoCorredora" class="logo-corredora hidden" src="" alt="Logo corredora">
+      <div class="header-divider"></div>
+      <img id="logoKonectaCuadrado" class="logo logo-konecta-cuadrado" src="Imagenes/kensa-favicon.png" alt="Logo Konecta">
+      <div class="header-user-info">
+        <div class="header-user-role" id="headerUserRole">USUARIO</div>
+        <div class="header-user-name" id="headerUserName">-</div>
+        <div id="userChip" class="muted hidden" style="font-size:.9rem">-</div>
+      </div>
+    </div>
+    <div class="users-actions">
+      <input id="q" type="text" placeholder="Buscar por nombre o RUT…">
+      <button id="btnNew" class="btn primary">+ Nuevo cliente</button>
+      <button id="btnTheme" class="btn" data-theme-toggle="true">Tema</button>
+      <a class="btn ghost" href="admin.html" id="btnBackAdmin" style="text-decoration:none">← Volver</a>
+    </div>
+  </header>
+
+  <main class="wrap" style="max-width:1320px">
+    <section class="card">
+      <div class="users-title-row">
+        <div class="users-title">Administrador de Clientes</div>
+        <div class="users-header-counter" id="counter"></div>
+      </div>
+      <div class="table-scroll">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th style="width:32px"><input type="checkbox" id="chkAll"></th>
+              <th>Nombre corredora</th>
+              <th>RUT corredora</th>
+              <th>Estado</th>
+              <th>Logo</th>
+              <th style="width:160px">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="toolbar">
+        <div>
+          <select id="pageSize">
+            <option>8</option><option selected>15</option><option>30</option><option>60</option><option>100</option>
+          </select>
+          <span class="muted">por página</span>
+        </div>
+        <div class="right">
+          <button id="btnDeleteSel" class="btn warn" disabled>Eliminar (0)</button>
+          <button id="prev" class="btn">←</button>
+          <span id="pageInfo" class="muted">1/1</span>
+          <button id="next" class="btn">→</button>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div class="kensa-footer">
+    <div class="kensa-footer__line"><span>By Kensa SPA</span></div>
+    <a href="https://www.kensa.cl/" target="_blank" rel="noopener">Conoce sobre nosotros</a>
+  </div>
+
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+    <div class="dialog">
+      <header>
+        <h3 id="dlgTitle">Nuevo cliente</h3>
+        <button id="close" class="btn">✕</button>
+      </header>
+      <div class="grid-2">
+        <div>
+          <label>Nombre corredora</label>
+          <input id="f_name" type="text" placeholder="Nombre corredora">
+        </div>
+        <div>
+          <label>RUT corredora <span class="muted">(Sin puntos y con guion)</span></label>
+          <input id="f_rut" type="text" placeholder="12345678-9" class="input-muted-placeholder">
+        </div>
+        <div>
+          <label>Estado</label>
+          <select id="f_status">
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
+        </div>
+        <div>
+          <label>Logo corredora</label>
+          <input id="f_logo" type="file" accept="image/*">
+          <img id="logoPreview" class="logo-thumb logo-preview hidden" alt="Vista previa logo">
+        </div>
+      </div>
+      <footer>
+        <button id="save" class="btn primary">Guardar</button>
+        <button id="cancel" class="btn">Cancelar</button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="dialog">
+      <header>
+        <h3 id="confirmTitle">Confirmar eliminación</h3>
+      </header>
+      <p id="confirmMsg"></p>
+      <footer>
+        <button id="confirmContinue" class="btn warn">Continuar</button>
+        <button id="confirmClose" class="btn">Cancelar</button>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    const THEME_KEY = 'kensaTheme';
+    const applyThemeAttrs = (theme) => {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.body?.setAttribute('data-theme', theme);
+    };
+    const setTheme = (theme) => {
+      const next = theme || 'dark';
+      applyThemeAttrs(next);
+      localStorage.setItem(THEME_KEY, next);
+    };
+    const loadInitialTheme = () => {
+      const stored = localStorage.getItem(THEME_KEY);
+      if (stored) return stored;
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        return 'light';
+      }
+      return 'dark';
+    };
+    setTheme(loadInitialTheme());
+    document.addEventListener('click', (ev) => {
+      const toggleBtn = ev.target.closest('[data-theme-toggle]');
+      if (!toggleBtn) return;
+      ev.preventDefault();
+      const current = localStorage.getItem(THEME_KEY) || 'dark';
+      setTheme(current === 'dark' ? 'light' : 'dark');
+    });
+    window.addEventListener('storage', (ev) => {
+      if (ev.key === THEME_KEY && ev.newValue) {
+        applyThemeAttrs(ev.newValue);
+      }
+    });
+  })();
+  (() => {
+    const parseQuery = () => Object.fromEntries(new URLSearchParams(location.search));
+    const q = parseQuery();
+    const sessionRaw = localStorage.getItem('kensaCurrentTenant');
+    let currentSession = null;
+    try { currentSession = sessionRaw ? JSON.parse(sessionRaw) : null; } catch { currentSession = null; }
+    const fallbackTenant = 'demo-kensa';
+    const tenant =
+      q.tenant ||
+      (currentSession && currentSession.tenantId) ||
+      fallbackTenant;
+    if (!currentSession && !q.tenant) {
+      window.location.href = 'admin.html';
+      return;
+    }
+    const K_CLIENTS = (t) => `corredores_v1:${t}:clients`;
+    const normalizeRutLocal = (v = '') =>
+      String(v || '')
+        .replace(/\./g, '')
+        .replace(/-/g, '')
+        .replace(/\s+/g, '')
+        .toLowerCase();
+    const formatRutValue = (value = '') => {
+      const clean = String(value || '').replace(/\./g, '').replace(/\s+/g, '').toUpperCase();
+      if (!clean) return '';
+      if (clean.includes('-')) return clean;
+      if (clean.length > 1) return `${clean.slice(0, -1)}-${clean.slice(-1)}`;
+      return clean;
+    };
+    const isRutFormatValid = (value = '') => /^\d{1,8}-[\dK]$/i.test(formatRutValue(value));
+    const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+    const escapeHtml = (str = '') =>
+      String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    function safeGet(id) {
+      return document.getElementById(id);
+    }
+
+    function initClientsUi() {
+      let clients = loadClients();
+      let page = 1;
+      let pageSize = 15;
+      let selected = new Set();
+      let editingId = null;
+      let pendingLogoDataUrl = null;
+      let pendingDeleteId = null;
+
+      const rows = safeGet('rows');
+      const chkAll = safeGet('chkAll');
+      const pageInfo = safeGet('pageInfo');
+    const btnDeleteSel = safeGet('btnDeleteSel');
+    const loginUserChip = safeGet('userChip');
+    const headerUserName = safeGet('headerUserName');
+    const headerUserRole = safeGet('headerUserRole');
+    const logoCorredora = safeGet('logoCorredora');
+    const logoKonecta = safeGet('logoKonectaCuadrado');
+      const searchInput = safeGet('q');
+      const pageSizeSelect = safeGet('pageSize');
+      const btnPrev = safeGet('prev');
+      const btnNext = safeGet('next');
+      const confirmModal = safeGet('confirmModal');
+      const confirmMsg = safeGet('confirmMsg');
+      const confirmClose = safeGet('confirmClose');
+      const confirmContinue = safeGet('confirmContinue');
+      const modal = safeGet('modal');
+      const dlgTitle = safeGet('dlgTitle');
+      const fName = safeGet('f_name');
+      const fRut = safeGet('f_rut');
+      const fStatus = safeGet('f_status');
+      const fLogo = safeGet('f_logo');
+      const logoPreview = safeGet('logoPreview');
+      const counter = safeGet('counter');
+      const btnNew = safeGet('btnNew');
+      const btnCancel = safeGet('cancel');
+      const btnCloseDialog = safeGet('close');
+      const btnSave = safeGet('save');
+      const btnDeleteSelected = btnDeleteSel;
+      const btnBackAdmin = safeGet('btnBackAdmin');
+
+      const essentials = [rows, chkAll, pageInfo, btnDeleteSel, modal, dlgTitle, fName, fRut, fStatus, counter];
+      if (essentials.some((el) => !el)) {
+        console.error('[Clientes] Falta un elemento base en el DOM, se aborta la carga.');
+        return;
+      }
+
+    if (loginUserChip && currentSession?.user) {
+      const u = currentSession.user;
+      loginUserChip.textContent = u.name || u.email || 'Usuario';
+    }
+
+    const findClientByRut = (rut) => {
+      const target = normalizeRutLocal(rut || '');
+      if (!target) return null;
+      const list = loadClients();
+      return list.find((c) => normalizeRutLocal(c.rutCorredora || '') === target) || null;
+    };
+    const applyHeaderBrand = () => {
+      const current = currentSession?.user || {};
+      if (headerUserRole) headerUserRole.textContent = 'USUARIO';
+      const nameValue = current.name || current.email || 'Usuario';
+      if (headerUserName) headerUserName.textContent = nameValue;
+      if (loginUserChip) loginUserChip.textContent = nameValue;
+      const rut = current.rutCorredora || current.brokerRut || '';
+      const client = findClientByRut(rut);
+      if (logoCorredora) {
+        if (client?.logoDataUrl) {
+          logoCorredora.src = client.logoDataUrl;
+          logoCorredora.classList.remove('hidden');
+        } else {
+          logoCorredora.src = '';
+          logoCorredora.classList.add('hidden');
+        }
+      }
+      if (logoKonecta && !logoKonecta.src) {
+        logoKonecta.src = '';
+      }
+    };
+    applyHeaderBrand();
+
+      function loadClients(){
+        try{
+          const raw = localStorage.getItem(K_CLIENTS(tenant));
+          const arr = raw ? JSON.parse(raw) : [];
+          return Array.isArray(arr) ? arr : [];
+        }catch(e){
+          console.error('[Clientes] No se pudieron cargar clientes de localStorage', e);
+          return [];
+        }
+      }
+      function saveClients(){
+        try {
+          localStorage.setItem(K_CLIENTS(tenant), JSON.stringify(clients));
+        } catch (err) {
+          console.error('[Clientes] Error guardando clientes', err);
+          alert('No se pudieron guardar los clientes en el navegador (localStorage). Borra datos o reduce el tamaño del logo e intenta nuevamente.');
+        }
+      }
+      function applySearch(list){
+        const term = (searchInput && searchInput.value || '').trim().toLowerCase();
+        if(!term) return list;
+        return list.filter(c =>
+          (c.nombreCorredora||'').toLowerCase().includes(term) ||
+          (c.rutCorredora||'').toLowerCase().includes(term) ||
+          (c.estado||'').toLowerCase().includes(term)
+        );
+      }
+      function paginate(list){
+        const total = list.length;
+        const pages = Math.max(1, Math.ceil(total / pageSize));
+        if(page>pages) page = pages;
+        const start = (page-1)*pageSize;
+        const slice = list.slice(start, start + pageSize);
+        if (pageInfo) pageInfo.textContent = `${page}/${pages} · ${total} clientes`;
+        return slice;
+      }
+      function updateLogoPreview(){
+        if(!logoPreview) return;
+        if(pendingLogoDataUrl){
+          logoPreview.src = pendingLogoDataUrl;
+          logoPreview.classList.remove('hidden');
+        } else {
+          logoPreview.src = '';
+          logoPreview.classList.add('hidden');
+        }
+      }
+      function render(){
+        if (!rows) return;
+        const filtered = applySearch(clients);
+        const view = paginate(filtered);
+        rows.innerHTML = view.map((c) => {
+          const isSel = selected.has(c.id) ? 'checked' : '';
+          const logo = c.logoDataUrl
+            ? `<img src="${c.logoDataUrl}" alt="Logo ${escapeHtml(c.nombreCorredora)}" class="logo-thumb">`
+            : '<span class="muted">Sin logo</span>';
+          const estadoLabel = c.estado === 'inactivo' ? 'Inactivo' : 'Activo';
+          return `<tr>
+            <td><input type="checkbox" data-id="${c.id}" class="rowChk" ${isSel}></td>
+            <td>${escapeHtml(c.nombreCorredora || '')}</td>
+            <td>${escapeHtml(c.rutCorredora || '')}</td>
+            <td><span class="chip">${estadoLabel}</span></td>
+            <td>${logo}</td>
+            <td>
+              <div class="row" style="gap:6px">
+                <button class="btn" data-act="edit" data-id="${c.id}">Editar</button>
+                <button class="btn warn" data-act="del" data-id="${c.id}">X</button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('');
+        if (counter) counter.textContent = selected.size>0 ? `${selected.size} seleccionados` : `${filtered.length} encontrados`;
+        if (chkAll) chkAll.checked = view.length>0 && view.every((entry)=>selected.has(entry.id));
+        if (btnDeleteSel) {
+          btnDeleteSel.disabled = selected.size===0;
+          btnDeleteSel.textContent = selected.size?`Eliminar (${selected.size})`:'Eliminar (0)';
+        }
+      }
+
+      function openDialog(title, data){
+        editingId = data?.id || null;
+        pendingLogoDataUrl = data?.logoDataUrl || null;
+        dlgTitle.textContent = title;
+        fName.value = data?.nombreCorredora||'';
+        fRut.value = data?.rutCorredora||'';
+        fStatus.value = data?.estado||'activo';
+        if (fLogo) fLogo.value = '';
+        updateLogoPreview();
+        modal.classList.add('show');
+        document.body.classList.add('modal-open');
+      }
+      function closeDialog(){
+        modal.classList.remove('show');
+        document.body.classList.remove('modal-open');
+        editingId = null;
+        pendingLogoDataUrl = null;
+        updateLogoPreview();
+      }
+      function collectForm(){
+        const name = fName.value.trim();
+        const rutRaw = fRut.value.trim();
+        const rutFormatted = formatRutValue(rutRaw);
+        const status = fStatus.value;
+        if(!name){
+          alert('El nombre de la corredora es obligatorio.');
+          return null;
+        }
+        if(!rutFormatted || !isRutFormatValid(rutFormatted)){
+          alert('El RUT de la corredora es inválido. Usa el formato 12345678-9.');
+          return null;
+        }
+        const rutKey = normalizeRutLocal(rutFormatted);
+        const exists = clients.some((c)=> normalizeRutLocal(c.rutCorredora||'') === rutKey && c.id !== editingId);
+        if(exists){
+          alert('Ya existe un cliente con ese RUT de corredora.');
+          return null;
+        }
+        return {
+          nombreCorredora: name,
+          rutCorredora: rutFormatted,
+          estado: status === 'inactivo' ? 'inactivo' : 'activo',
+          logoDataUrl: pendingLogoDataUrl || null,
+        };
+      }
+
+      document.addEventListener('click', (ev)=>{
+        const t = ev.target;
+        if(btnNew && t.matches('#btnNew')){
+          openDialog('Nuevo cliente');
+        }
+        if(t.matches('#cancel, #close')) closeDialog();
+        if(t.matches('#save')){
+          const data = collectForm();
+          if(!data) return;
+          if(editingId){
+            const idx = clients.findIndex(c=>c.id === editingId);
+            if(idx>-1){
+              clients[idx] = { ...clients[idx], ...data, updatedAt: new Date().toISOString() };
+            }
+          } else {
+            clients.push({ ...data, id: uid(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+          }
+          saveClients(); closeDialog(); render();
+        }
+        if(t.matches('[data-act="edit"]')){
+          const id = t.getAttribute('data-id');
+          const client = clients.find(c=>c.id === id);
+          if(client) openDialog('Editar cliente', client);
+        }
+        if(t.matches('[data-act="del"]')){
+          const id = t.getAttribute('data-id');
+          pendingDeleteId = id;
+          const clientName = clients.find((c)=>c.id===id)?.nombreCorredora || 'el cliente seleccionado';
+          if (confirmMsg) confirmMsg.textContent = `Estás a punto de eliminar a "${clientName}". ¿Confirmas?`;
+          if (confirmModal) confirmModal.classList.add('show');
+          document.body.classList.add('modal-open');
+        }
+      });
+
+      if (searchInput) searchInput.addEventListener('input', ()=>{ page=1; render(); });
+      if (pageSizeSelect) pageSizeSelect.addEventListener('change', (e)=>{ pageSize = parseInt(e.target.value,10); page=1; render(); });
+      if (btnPrev) btnPrev.addEventListener('click', ()=>{ if(page>1){page--; render();} });
+      if (btnNext) btnNext.addEventListener('click', ()=>{
+        const pages = Math.max(
+          1,
+          Math.ceil(applySearch(clients).length / pageSize)
+        );
+        if(page<pages){ page++; render(); }
+      });
+
+      document.addEventListener('change', (ev)=>{
+        const t = ev.target;
+        if(t.classList.contains('rowChk')){
+          const id = t.getAttribute('data-id');
+          if(t.checked) selected.add(id); else selected.delete(id);
+          render();
+        }
+        if(chkAll && t===chkAll){
+          const viewRows = rows.querySelectorAll('.rowChk');
+          viewRows.forEach((ch)=>{
+            ch.checked = t.checked;
+            const id = ch.getAttribute('data-id');
+            if(t.checked) selected.add(id); else selected.delete(id);
+          });
+          render();
+        }
+        if(fLogo && t.id === 'f_logo' && t.files && t.files[0]){
+          const file = t.files[0];
+          const reader = new FileReader();
+          reader.onload = (ev2) => {
+            pendingLogoDataUrl = ev2.target?.result || null;
+            updateLogoPreview();
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      if (btnDeleteSelected) {
+        btnDeleteSelected.addEventListener('click', ()=>{
+          if(selected.size===0) return;
+          pendingDeleteId = null;
+          const count = selected.size;
+          if (confirmMsg) {
+            confirmMsg.textContent = count === 1
+              ? 'Está a punto de eliminar 1 cliente seleccionado. ¿Está seguro de continuar?'
+              : `Está a punto de eliminar ${count} clientes seleccionados. ¿Está seguro de continuar?`;
+          }
+          if (confirmModal) confirmModal.classList.add('show');
+          document.body.classList.add('modal-open');
+        });
+      }
+
+      if (confirmClose && confirmModal) {
+        confirmClose.addEventListener('click', ()=>{
+          pendingDeleteId = null;
+          confirmModal.classList.remove('show');
+          document.body.classList.remove('modal-open');
+        });
+      }
+
+      if (confirmContinue && confirmModal) {
+        confirmContinue.addEventListener('click', ()=>{
+          if(pendingDeleteId){
+            clients = clients.filter((c)=>c.id !== pendingDeleteId);
+            selected.delete(pendingDeleteId);
+          } else if(selected.size){
+            clients = clients.filter((c)=>!selected.has(c.id));
+            selected.clear();
+          }
+          saveClients();
+          render();
+          pendingDeleteId = null;
+          confirmModal.classList.remove('show');
+          document.body.classList.remove('modal-open');
+        });
+      }
+
+      if (btnBackAdmin) {
+        btnBackAdmin.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (window.history.length > 1) window.history.back();
+          else window.location.href = 'admin.html';
+        });
+      }
+
+      render();
+    }
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      initClientsUi();
+    } else {
+      document.addEventListener('DOMContentLoaded', initClientsUi);
+    }
+  })();
+  </script>
+</body>
+</html>
